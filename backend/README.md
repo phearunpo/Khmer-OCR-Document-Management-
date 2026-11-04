@@ -2,24 +2,30 @@
 
 This directory contains the Laravel API for Khmer OCR Document Management. For project-wide setup, see the [root README](../README.md).
 
-## Document endpoints
+## Authentication and document endpoints
 
-Both endpoints require Sanctum authentication:
+Sign in with an existing user account to receive a Laravel Sanctum bearer token:
+
+```powershell
+curl.exe -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' http://127.0.0.1:8000/api/login
+```
+
+Send the returned token as `Authorization: Bearer YOUR_TOKEN` on authenticated requests. Login is rate limited. Registration is not implemented; provision user accounts separately.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/api/documents` | List the signed-in user's documents, newest first |
-| `POST` | `/api/documents` | Upload a document as multipart form field `file` |
+| `POST` | `/api/login` | Exchange email and password for a bearer token |
+| `POST` | `/api/logout` | Revoke the current bearer token (authentication required) |
+| `GET` | `/api/documents` | List the signed-in user's documents, newest first (authentication required) |
+| `POST` | `/api/documents` | Upload a document as multipart form field `file` (authentication required) |
 
 PDF, PNG, and JPEG files up to 10 MB are accepted. Uploads are stored on Laravel's private `local` disk. Responses contain document metadata and do not expose storage paths.
 
-Example:
+Example upload:
 
 ```powershell
-curl.exe -H "Authorization: Bearer <token>" -F "file=@document.pdf" http://127.0.0.1:8000/api/documents
+curl.exe -H "Authorization: Bearer YOUR_TOKEN" -F "file=@document.pdf" http://127.0.0.1:8000/api/documents
 ```
-
-An authentication or token issuance flow is not implemented yet. The endpoints require a Sanctum token supplied by an existing authentication flow.
 
 ## Tests
 

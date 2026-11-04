@@ -43,24 +43,30 @@ npm run dev
 
 Open the local URL printed by Vite. The frontend is currently a standalone preview and is not connected to the API yet.
 
-## Document API
+## Authentication and document API
 
-Both endpoints require Laravel Sanctum authentication:
+Sign in with an existing user account to receive a Laravel Sanctum bearer token:
+
+```powershell
+curl.exe -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' http://127.0.0.1:8000/api/login
+```
+
+Use the returned `token` as `Authorization: Bearer YOUR_TOKEN` on authenticated requests. Login is rate limited. Registration is not implemented; provision user accounts separately.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/api/documents` | List the authenticated user's documents, newest first |
-| `POST` | `/api/documents` | Upload one document using multipart form field `file` |
+| `POST` | `/api/login` | Exchange email and password for a bearer token |
+| `POST` | `/api/logout` | Revoke the current bearer token (authentication required) |
+| `GET` | `/api/documents` | List the authenticated user's documents, newest first (authentication required) |
+| `POST` | `/api/documents` | Upload one document using multipart form field `file` (authentication required) |
 
 Uploads accept PDF, PNG, and JPEG files up to 10 MB. Files are stored privately and are not exposed by a public URL. The API response includes document metadata, not the private storage path.
 
-Example upload, using an available Sanctum bearer token:
+Example upload, using the bearer token returned by login:
 
 ```powershell
-curl.exe -H "Authorization: Bearer <token>" -F "file=@document.pdf" http://127.0.0.1:8000/api/documents
+curl.exe -H "Authorization: Bearer YOUR_TOKEN" -F "file=@document.pdf" http://127.0.0.1:8000/api/documents
 ```
-
-An API token issuance or sign-in flow has not been implemented yet, so the protected endpoints cannot be used from the frontend until authentication is added.
 
 ## Tests
 
