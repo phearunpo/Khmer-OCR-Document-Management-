@@ -2,6 +2,8 @@
 
 This directory contains the Laravel API for Khmer OCR Document Management. For project-wide setup, see the [root README](../README.md).
 
+The API allows requests from the frontend origin configured by `FRONTEND_URL` (default `http://localhost:5173`). Set this value to the origin serving the frontend when it differs.
+
 ## Authentication and document endpoints
 
 Sign in with an existing user account to receive a Laravel Sanctum bearer token:

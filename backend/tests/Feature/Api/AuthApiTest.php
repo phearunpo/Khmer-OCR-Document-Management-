@@ -60,6 +60,15 @@ class AuthApiTest extends TestCase
             ->assertJsonValidationErrors(['email', 'password']);
     }
 
+    public function test_frontend_origin_is_allowed_to_call_the_api(): void
+    {
+        $this->withHeaders([
+            'Origin' => 'http://localhost:5173',
+            'Access-Control-Request-Method' => 'POST',
+        ])->options('/api/login')
+            ->assertHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+    }
+
     public function test_user_can_logout_and_revoke_their_token(): void
     {
         $user = User::factory()->create();

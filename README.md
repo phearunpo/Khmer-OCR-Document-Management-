@@ -4,7 +4,7 @@ A document-management project for organizing Khmer-language files and preparing 
 
 ## Project status
 
-- **Frontend:** React dashboard for adding PDF and image file details, searching, and filtering. The current preview keeps entries in browser memory and does not upload files.
+- **Frontend:** React dashboard for signing in, listing documents, and uploading PDF/image files through the API.
 - **Backend:** Laravel API for authenticated document uploads and listing. Files are stored on Laravel's private local disk.
 - **OCR:** Processing is not connected yet.
 
@@ -41,7 +41,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. The frontend is currently a standalone preview and is not connected to the API yet.
+Open the local URL printed by Vite. The frontend connects to the API at `http://127.0.0.1:8000/api` by default. Set `VITE_API_BASE_URL` in `frontend/.env.local` to override it. The backend's `FRONTEND_URL` must match the browser origin (default `http://localhost:5173`) for CORS.
 
 ## Authentication and document API
 
@@ -51,7 +51,7 @@ Sign in with an existing user account to receive a Laravel Sanctum bearer token:
 curl.exe -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' http://127.0.0.1:8000/api/login
 ```
 
-Use the returned `token` as `Authorization: Bearer YOUR_TOKEN` on authenticated requests. Login is rate limited. Registration is not implemented; provision user accounts separately.
+Sign in to the frontend with an existing user account. For direct API requests, use the returned `token` as `Authorization: Bearer YOUR_TOKEN`. Login is rate limited. Registration is not implemented; provision user accounts separately.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |

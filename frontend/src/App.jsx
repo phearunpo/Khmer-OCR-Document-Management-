@@ -1,7 +1,44 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 const filters = ['All documents', 'PDFs', 'Images']
+const apiBaseUrl = (
+  import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000/api'
+).replace(/\/$/, '')
+const tokenStorageKey = 'khmerdocs-token'
+
+async function requestApi(path, token, options = {}) {
+  let response
+
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      ...options,
+      headers: {
+        Accept: 'application/json',
+        ...(options.body instanceof FormData
+          ? {}
+          : { 'Content-Type': 'application/json' }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    })
+  } catch {
+    throw new Error('Cannot reach the API. Check that the backend is running.')
+  }
+
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const validationMessage = Object.values(payload.errors ?? {}).flat()[0]
+    const error = new Error(
+      validationMessage ?? payload.message ?? 'The request could not be completed.',
+    )
+    error.status = response.status
+    throw error
+  }
+
+  return payload
+}
 
 function formatFileSize(size) {
   if (size < 1024 * 1024) {
@@ -11,30 +48,63 @@ function formatFileSize(size) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function getDocumentType(file) {
-  const extension = file.name.split('.').pop()?.toLowerCase()
-
-  if (file.type === 'application/pdf' || extension === 'pdf') {
-    return 'PDF'
-  }
-
-  if (
-    file.type === 'image/png' ||
-    file.type === 'image/jpeg' ||
-    ['png', 'jpg', 'jpeg'].includes(extension)
-  ) {
-    return 'Image'
-  }
-
-  return null
-}
-
 function App() {
   const fileInput = useRef(null)
+  const [token, setToken] = useState(() => sessionStorage.getItem(tokenStorageKey))
+  const [user, setUser] = useState(null)
   const [documents, setDocuments] = useState([])
   const [activeFilter, setActiveFilter] = useState(filters[0])
   const [query, setQuery] = useState('')
   const [uploadError, setUploadError] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [isLoading, setIsLoading] = useState(Boolean(token))
+  const [isUploading, setIsUploading] = useState(false)
+
+  useEffect(() => {
+    if (!token) {
+      return undefined
+    }
+
+    let isCurrent = true
+
+    Promise.all([
+      requestApi('/user', token),
+      requestApi('/documents', token),
+    ])
+      .then(([authenticatedUser, response]) => {
+        if (isCurrent) {
+          setUser(authenticatedUser)
+          setDocuments(response.data.map((document) => ({
+            ...document,
+            addedAt: new Date(document.created_at),
+          })))
+        }
+      })
+      .catch((error) => {
+        if (!isCurrent) {
+          return
+        }
+
+        if (error.status === 401) {
+          sessionStorage.removeItem(tokenStorageKey)
+          setToken(null)
+          setUser(null)
+          setDocuments([])
+          setAuthError('Your session expired. Please sign in again.')
+        } else {
+          setAuthError(error.message)
+        }
+      })
+      .finally(() => {
+        if (isCurrent) {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [token])
 
   const visibleDocuments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -52,42 +122,138 @@ function App() {
     })
   }, [activeFilter, documents, query])
 
-  function addFiles(event) {
+  async function handleLogin(event) {
+    event.preventDefault()
+    setIsLoading(true)
+    setAuthError('')
+
+    const formData = new FormData(event.currentTarget)
+
+    try {
+      const response = await requestApi('/login', null, {
+        method: 'POST',
+        body: JSON.stringify({
+          email: formData.get('email'),
+          password: formData.get('password'),
+        }),
+      })
+      sessionStorage.setItem(tokenStorageKey, response.token)
+      setUser(response.user)
+      setToken(response.token)
+    } catch (error) {
+      setAuthError(error.message)
+      setIsLoading(false)
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await requestApi('/logout', token, { method: 'POST' })
+      setAuthError('')
+    } catch (error) {
+      setAuthError(`Signed out locally, but the API could not revoke the token: ${error.message}`)
+    }
+
+    sessionStorage.removeItem(tokenStorageKey)
+    setToken(null)
+    setUser(null)
+    setDocuments([])
+  }
+
+  async function addFiles(event) {
     const selectedFiles = Array.from(event.target.files ?? [])
-    const acceptedFiles = selectedFiles.flatMap((file) => {
-      const type = getDocumentType(file)
-
-      return type
-        ? [{
-            id: `${file.name}-${file.size}-${file.lastModified}`,
-            name: file.name,
-            size: file.size,
-            type,
-            addedAt: new Date(),
-          }]
-        : []
-    })
-    const rejectedCount = selectedFiles.length - acceptedFiles.length
-
-    setDocuments((currentDocuments) => [
-      ...acceptedFiles.filter(
-        (acceptedFile) =>
-          !currentDocuments.some(
-            (currentDocument) => currentDocument.id === acceptedFile.id,
-          ),
-      ),
-      ...currentDocuments,
-    ])
-    setUploadError(
-      rejectedCount > 0
-        ? 'Unsupported file type. Choose PDF, PNG, or JPEG documents.'
-        : '',
-    )
     event.target.value = ''
+
+    if (selectedFiles.length === 0) {
+      return
+    }
+
+    setIsUploading(true)
+    setUploadError('')
+    const failures = []
+
+    for (const file of selectedFiles) {
+      const body = new FormData()
+      body.append('file', file)
+
+      try {
+        await requestApi('/documents', token, { method: 'POST', body })
+      } catch (error) {
+        if (error.status === 401) {
+          sessionStorage.removeItem(tokenStorageKey)
+          setToken(null)
+          setUser(null)
+          setDocuments([])
+          setAuthError('Your session expired. Please sign in again.')
+          setIsUploading(false)
+          return
+        }
+
+        failures.push(`${file.name}: ${error.message}`)
+      }
+    }
+
+    try {
+      const response = await requestApi('/documents', token)
+      setDocuments(response.data.map((document) => ({
+        ...document,
+        addedAt: new Date(document.created_at),
+      })))
+    } catch (error) {
+      failures.push(`Could not refresh the document list: ${error.message}`)
+    }
+
+    setUploadError(failures.join(' '))
+    setIsUploading(false)
   }
 
   const pdfCount = documents.filter((document) => document.type === 'PDF').length
   const imageCount = documents.length - pdfCount
+
+  if (!token) {
+    return (
+      <main className="auth-page">
+        <form className="auth-card" onSubmit={handleLogin}>
+          <a className="brand auth-brand" href="/" aria-label="KhmerDocs home">
+            <span className="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M7 3.75h6.5L19 9.25v10A1.75 1.75 0 0 1 17.25 21h-10A1.75 1.75 0 0 1 5.5 19.25v-13A2.5 2.5 0 0 1 8 3.75Z"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M13 4v5.5h5.5M8.5 13h7M8.5 16.5h7"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span>KhmerDocs</span>
+          </a>
+          <p className="eyebrow">DOCUMENT MANAGEMENT</p>
+          <h1>Welcome back</h1>
+          <p className="page-description">Sign in to access your document library.</p>
+          <label className="auth-field">
+            Email
+            <input name="email" type="email" autoComplete="username" required />
+          </label>
+          <label className="auth-field">
+            Password
+            <input name="password" type="password" autoComplete="current-password" required />
+          </label>
+          {authError && <p className="auth-error" role="alert">{authError}</p>}
+          <button className="upload-button auth-submit" type="submit" disabled={isLoading}>
+            {isLoading ? 'Signing in…' : 'Sign in'}
+          </button>
+          <p className="auth-note">Ask your administrator for an account.</p>
+        </form>
+      </main>
+    )
+  }
 
   return (
     <div className="app-shell">
@@ -136,8 +302,8 @@ function App() {
         <div className="sidebar-footer">
           <span className="local-indicator" />
           <div>
-            <strong>Local preview</strong>
-            <span>No server connection</span>
+            <strong>Connected</strong>
+            <span>{user?.email}</span>
           </div>
         </div>
       </aside>
@@ -145,7 +311,12 @@ function App() {
       <main className="main-content" id="documents">
         <header className="topbar">
           <span className="breadcrumb">Workspace <span>/</span> Documents</span>
-          <span className="language-chip">ភាសាខ្មែរ</span>
+          <div className="topbar-actions">
+            <span className="language-chip">ភាសាខ្មែរ</span>
+            <button className="logout-button" type="button" onClick={handleLogout}>
+              Sign out
+            </button>
+          </div>
         </header>
 
         <section className="page-content">
@@ -170,11 +341,17 @@ function App() {
               className="upload-button"
               type="button"
               onClick={() => fileInput.current?.click()}
+              disabled={isUploading || isLoading}
             >
               <span aria-hidden="true">+</span>
-              Add documents
+              {isUploading ? 'Uploading…' : 'Add documents'}
             </button>
           </div>
+          {authError && (
+            <p className="upload-error" role="alert">
+              {authError}
+            </p>
+          )}
           {uploadError && (
             <p className="upload-error" role="alert">
               {uploadError}
@@ -280,7 +457,9 @@ function App() {
               ))}
             </div>
 
-            {visibleDocuments.length > 0 ? (
+            {isLoading ? (
+              <div className="empty-state" role="status">Loading documents…</div>
+            ) : visibleDocuments.length > 0 ? (
               <div className="table-scroll">
                 <table>
                   <thead>
@@ -312,7 +491,7 @@ function App() {
                           })}
                         </td>
                         <td>{formatFileSize(document.size)}</td>
-                        <td><span className="status-pill">Local preview</span></td>
+                        <td><span className="status-pill">Stored</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -356,7 +535,7 @@ function App() {
             )}
           </section>
           <p className="privacy-note">
-            Only file details appear here. Files are not uploaded or saved.
+            Documents are uploaded to your account's private storage.
           </p>
         </section>
       </main>
