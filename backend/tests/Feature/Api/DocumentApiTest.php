@@ -87,6 +87,71 @@ class DocumentApiTest extends TestCase
             ->assertJsonPath('data.0.name', 'owner.pdf');
     }
 
+    public function test_document_list_is_paginated_and_keeps_user_scope(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        Document::factory()->count(12)->create([
+            'user_id' => $user->id,
+        ]);
+        Document::factory()->create([
+            'user_id' => $otherUser->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/documents')
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('meta.per_page', 10)
+            ->assertJsonPath('meta.total', 12);
+
+        $this->getJson('/api/documents?page=2')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.current_page', 2)
+            ->assertJsonPath('meta.total', 12);
+    }
+
+    public function test_document_list_can_be_filtered_by_type_and_name(): void
+    {
+        $user = User::factory()->create();
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'khmer-report.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'khmer-scan.jpg',
+            'mime_type' => 'image/jpeg',
+        ]);
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'english-report.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/documents?search=khmer&type=PDF')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'khmer-report.pdf')
+            ->assertJsonPath('meta.total', 1);
+    }
+
+    public function test_document_list_rejects_invalid_pagination_and_type_filters(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/documents?page=0&type=Word')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['page', 'type']);
+    }
+
     public function test_user_can_delete_their_document_and_its_stored_file(): void
     {
         Storage::fake('local');

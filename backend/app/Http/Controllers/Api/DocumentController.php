@@ -17,9 +17,28 @@ class DocumentController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        return DocumentResource::collection(
-            $request->user()->documents()->latest()->get(),
-        );
+        $filters = $request->validate([
+            'search' => ['sometimes', 'string', 'max:255'],
+            'type' => ['sometimes', 'in:PDF,Image'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+        ]);
+
+        $documents = $request->user()->documents()
+            ->when(
+                $filters['search'] ?? null,
+                fn ($query, $search) => $query->whereLike('original_name', "%{$search}%"),
+            )
+            ->when(
+                $filters['type'] ?? null,
+                fn ($query, $type) => $type === 'PDF'
+                    ? $query->where('mime_type', 'application/pdf')
+                    : $query->whereIn('mime_type', ['image/png', 'image/jpeg']),
+            )
+            ->latest('id')
+            ->paginate(10)
+            ->withQueryString();
+
+        return DocumentResource::collection($documents);
     }
 
     public function store(StoreDocumentRequest $request): JsonResponse

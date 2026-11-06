@@ -57,7 +57,7 @@ Sign in to the frontend with an existing user account. For direct API requests, 
 | --- | --- | --- |
 | `POST` | `/api/login` | Exchange email and password for a bearer token |
 | `POST` | `/api/logout` | Revoke the current bearer token (authentication required) |
-| `GET` | `/api/documents` | List the authenticated user's documents, newest first (authentication required) |
+| `GET` | `/api/documents` | List up to 10 documents per page; accepts `page`, `search`, and `type=PDF\|Image` (authentication required) |
 | `POST` | `/api/documents` | Upload one document using multipart form field `file` (authentication required) |
 | `GET` | `/api/documents/{id}/download` | Download a private document owned by the authenticated user |
 | `DELETE` | `/api/documents/{id}` | Delete one of the authenticated user's documents and its stored file (authentication required) |

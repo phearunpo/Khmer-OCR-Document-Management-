@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const filters = ['All documents', 'PDFs', 'Images']
@@ -81,6 +81,14 @@ function App() {
   const [documents, setDocuments] = useState([])
   const [activeFilter, setActiveFilter] = useState(filters[0])
   const [query, setQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+  })
   const [uploadError, setUploadError] = useState('')
   const [documentError, setDocumentError] = useState('')
   const [authError, setAuthError] = useState('')
@@ -96,17 +104,10 @@ function App() {
 
     let isCurrent = true
 
-    Promise.all([
-      requestApi('/user', token),
-      requestApi('/documents', token),
-    ])
-      .then(([authenticatedUser, response]) => {
+    requestApi('/user', token)
+      .then((authenticatedUser) => {
         if (isCurrent) {
           setUser(authenticatedUser)
-          setDocuments(response.data.map((document) => ({
-            ...document,
-            addedAt: new Date(document.created_at),
-          })))
         }
       })
       .catch((error) => {
@@ -124,6 +125,70 @@ function App() {
           setAuthError(error.message)
         }
       })
+    return () => {
+      isCurrent = false
+    }
+  }, [token])
+
+  useEffect(() => {
+    if (!token) {
+      return undefined
+    }
+
+    let isCurrent = true
+    const params = new URLSearchParams({ page: String(currentPage) })
+    const search = query.trim()
+
+    if (search) {
+      params.set('search', search)
+    }
+
+    if (activeFilter === 'PDFs') {
+      params.set('type', 'PDF')
+    } else if (activeFilter === 'Images') {
+      params.set('type', 'Image')
+    }
+
+    requestApi(`/documents?${params}`, token)
+      .then((response) => {
+        if (!isCurrent) {
+          return
+        }
+
+        if (currentPage > response.meta.last_page) {
+          setCurrentPage(response.meta.last_page)
+          return
+        }
+
+        setDocuments(response.data.map((document) => ({
+          ...document,
+          addedAt: new Date(document.created_at),
+        })))
+        setPagination(response.meta)
+        setDocumentError('')
+      })
+      .catch((error) => {
+        if (!isCurrent) {
+          return
+        }
+
+        if (error.status === 401) {
+          sessionStorage.removeItem(tokenStorageKey)
+          setToken(null)
+          setUser(null)
+          setDocuments([])
+          setAuthError('Your session expired. Please sign in again.')
+        } else {
+          setDocumentError(error.message)
+          setDocuments([])
+          setPagination({
+            current_page: currentPage,
+            last_page: 1,
+            per_page: 10,
+            total: 0,
+          })
+        }
+      })
       .finally(() => {
         if (isCurrent) {
           setIsLoading(false)
@@ -133,23 +198,43 @@ function App() {
     return () => {
       isCurrent = false
     }
-  }, [token])
+  }, [activeFilter, currentPage, query, refreshKey, token])
 
-  const visibleDocuments = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
+  function reloadDocuments() {
+    setIsLoading(true)
+    setRefreshKey((key) => key + 1)
+  }
 
-    return documents.filter((document) => {
-      const matchesFilter =
-        activeFilter === 'All documents' ||
-        (activeFilter === 'PDFs' && document.type === 'PDF') ||
-        (activeFilter === 'Images' && document.type === 'Image')
+  function handleSearchChange(event) {
+    const nextQuery = event.target.value
 
-      return (
-        matchesFilter &&
-        document.name.toLowerCase().includes(normalizedQuery)
-      )
-    })
-  }, [activeFilter, documents, query])
+    if (nextQuery === query && currentPage === 1) {
+      return
+    }
+
+    setQuery(nextQuery)
+    setCurrentPage(1)
+    setIsLoading(true)
+  }
+
+  function handleFilterChange(filter) {
+    if (filter === activeFilter && currentPage === 1) {
+      return
+    }
+
+    setActiveFilter(filter)
+    setCurrentPage(1)
+    setIsLoading(true)
+  }
+
+  function handlePageChange(page) {
+    if (page === currentPage) {
+      return
+    }
+
+    setCurrentPage(page)
+    setIsLoading(true)
+  }
 
   async function handleLogin(event) {
     event.preventDefault()
@@ -222,15 +307,7 @@ function App() {
       }
     }
 
-    try {
-      const response = await requestApi('/documents', token)
-      setDocuments(response.data.map((document) => ({
-        ...document,
-        addedAt: new Date(document.created_at),
-      })))
-    } catch (error) {
-      failures.push(`Could not refresh the document list: ${error.message}`)
-    }
+    reloadDocuments()
 
     setUploadError(failures.join(' '))
     setIsUploading(false)
@@ -246,9 +323,7 @@ function App() {
 
     try {
       await requestApi(`/documents/${document.id}`, token, { method: 'DELETE' })
-      setDocuments((currentDocuments) =>
-        currentDocuments.filter((currentDocument) => currentDocument.id !== document.id),
-      )
+      reloadDocuments()
     } catch (error) {
       if (error.status === 401) {
         sessionStorage.removeItem(tokenStorageKey)
@@ -466,11 +541,11 @@ function App() {
                 </svg>
               </span>
               <span className="stat-label">Total documents</span>
-              <strong className="stat-value">{documents.length}</strong>
+              <strong className="stat-value">{pagination.total}</strong>
             </article>
             <article className="stat-card">
               <span className="stat-icon pdf-icon" aria-hidden="true">PDF</span>
-              <span className="stat-label">PDF files</span>
+              <span className="stat-label">PDFs on this page</span>
               <strong className="stat-value">{pdfCount}</strong>
             </article>
             <article className="stat-card">
@@ -495,7 +570,7 @@ function App() {
                   />
                 </svg>
               </span>
-              <span className="stat-label">Image files</span>
+              <span className="stat-label">Images on this page</span>
               <strong className="stat-value">{imageCount}</strong>
             </article>
           </div>
@@ -526,7 +601,7 @@ function App() {
                   type="search"
                   placeholder="Search documents"
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={handleSearchChange}
                   aria-label="Search documents"
                 />
               </label>
@@ -539,7 +614,7 @@ function App() {
                   key={filter}
                   type="button"
                   aria-pressed={activeFilter === filter}
-                  onClick={() => setActiveFilter(filter)}
+                  onClick={() => handleFilterChange(filter)}
                 >
                   {filter}
                 </button>
@@ -548,7 +623,7 @@ function App() {
 
             {isLoading ? (
               <div className="empty-state" role="status">Loading documents…</div>
-            ) : visibleDocuments.length > 0 ? (
+            ) : documents.length > 0 ? (
               <div className="table-scroll">
                 <table>
                   <thead>
@@ -562,7 +637,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleDocuments.map((document) => (
+                    {documents.map((document) => (
                       <tr key={document.id}>
                         <td>
                           <span className={`file-badge ${document.type === 'PDF' ? 'pdf-badge' : 'image-badge'}`}>
@@ -626,13 +701,23 @@ function App() {
                     />
                   </svg>
                 </span>
-                <h3>{documents.length === 0 ? 'No documents yet' : 'No matching documents'}</h3>
+                <h3>
+                  {pagination.total === 0 &&
+                  !query.trim() &&
+                  activeFilter === filters[0]
+                    ? 'No documents yet'
+                    : 'No matching documents'}
+                </h3>
                 <p>
-                  {documents.length === 0
+                  {pagination.total === 0 &&
+                  !query.trim() &&
+                  activeFilter === filters[0]
                     ? 'Add a PDF or image to get started with your document library.'
                     : 'Try a different search or document type.'}
                 </p>
-                {documents.length === 0 && (
+                {pagination.total === 0 &&
+                  !query.trim() &&
+                  activeFilter === filters[0] && (
                   <button
                     className="empty-upload-button"
                     type="button"
@@ -640,7 +725,43 @@ function App() {
                   >
                     Choose a file
                   </button>
-                )}
+                  )}
+              </div>
+            )}
+            {pagination.total > 0 && (
+              <div className="pagination-controls" aria-label="Document pages">
+                <span className="pagination-summary">
+                  Showing {(pagination.current_page - 1) * pagination.per_page + 1}
+                  {'–'}
+                  {Math.min(
+                    pagination.current_page * pagination.per_page,
+                    pagination.total,
+                  )}{' '}
+                  of {pagination.total}
+                </span>
+                <div className="pagination-buttons">
+                  <button
+                    className="page-button"
+                    type="button"
+                    disabled={pagination.current_page <= 1 || isLoading}
+                    onClick={() => handlePageChange(pagination.current_page - 1)}
+                  >
+                    Previous
+                  </button>
+                  <span className="page-number" aria-live="polite">
+                    Page {pagination.current_page} of {pagination.last_page}
+                  </span>
+                  <button
+                    className="page-button"
+                    type="button"
+                    disabled={
+                      pagination.current_page >= pagination.last_page || isLoading
+                    }
+                    onClick={() => handlePageChange(pagination.current_page + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )}
           </section>

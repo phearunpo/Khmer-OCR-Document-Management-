@@ -18,7 +18,7 @@ Send the returned token as `Authorization: Bearer YOUR_TOKEN` on authenticated r
 | --- | --- | --- |
 | `POST` | `/api/login` | Exchange email and password for a bearer token |
 | `POST` | `/api/logout` | Revoke the current bearer token (authentication required) |
-| `GET` | `/api/documents` | List the signed-in user's documents, newest first (authentication required) |
+| `GET` | `/api/documents` | List 10 documents per page; accepts `page`, `search`, and `type=PDF\|Image` (authentication required) |
 | `POST` | `/api/documents` | Upload a document as multipart form field `file` (authentication required) |
 | `GET` | `/api/documents/{id}/download` | Download a private document owned by the signed-in user |
 | `DELETE` | `/api/documents/{id}` | Delete one of the signed-in user's documents and its stored file (authentication required) |
