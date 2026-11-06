@@ -56,9 +56,11 @@ function App() {
   const [activeFilter, setActiveFilter] = useState(filters[0])
   const [query, setQuery] = useState('')
   const [uploadError, setUploadError] = useState('')
+  const [documentError, setDocumentError] = useState('')
   const [authError, setAuthError] = useState('')
   const [isLoading, setIsLoading] = useState(Boolean(token))
   const [isUploading, setIsUploading] = useState(false)
+  const [deletingDocumentId, setDeletingDocumentId] = useState(null)
 
   useEffect(() => {
     if (!token) {
@@ -205,6 +207,34 @@ function App() {
 
     setUploadError(failures.join(' '))
     setIsUploading(false)
+  }
+
+  async function deleteDocument(document) {
+    if (!window.confirm(`Delete "${document.name}"? This cannot be undone.`)) {
+      return
+    }
+
+    setDeletingDocumentId(document.id)
+    setDocumentError('')
+
+    try {
+      await requestApi(`/documents/${document.id}`, token, { method: 'DELETE' })
+      setDocuments((currentDocuments) =>
+        currentDocuments.filter((currentDocument) => currentDocument.id !== document.id),
+      )
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setDocumentError(`Could not delete ${document.name}: ${error.message}`)
+      }
+    } finally {
+      setDeletingDocumentId(null)
+    }
   }
 
   const pdfCount = documents.filter((document) => document.type === 'PDF').length
@@ -357,6 +387,11 @@ function App() {
               {uploadError}
             </p>
           )}
+          {documentError && (
+            <p className="upload-error" role="alert">
+              {documentError}
+            </p>
+          )}
 
           <div className="stats-grid" aria-label="Document totals">
             <article className="stat-card">
@@ -469,6 +504,7 @@ function App() {
                       <th scope="col">Date added</th>
                       <th scope="col">Size</th>
                       <th scope="col">Status</th>
+                      <th scope="col"><span className="visually-hidden">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -492,6 +528,17 @@ function App() {
                         </td>
                         <td>{formatFileSize(document.size)}</td>
                         <td><span className="status-pill">Stored</span></td>
+                        <td>
+                          <button
+                            className="delete-document-button"
+                            type="button"
+                            disabled={deletingDocumentId === document.id}
+                            onClick={() => deleteDocument(document)}
+                            aria-label={`Delete ${document.name}`}
+                          >
+                            {deletingDocumentId === document.id ? 'Deleting…' : 'Delete'}
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

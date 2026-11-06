@@ -49,4 +49,17 @@ class DocumentController extends Controller
             ->response()
             ->setStatusCode(201);
     }
+
+    public function destroy(Request $request, int $document): JsonResponse
+    {
+        $document = $request->user()->documents()->findOrFail($document);
+
+        if (! Storage::disk($document->disk)->delete($document->path)) {
+            throw new RuntimeException('Unable to delete the stored document.');
+        }
+
+        $document->delete();
+
+        return response()->json(null, 204);
+    }
 }

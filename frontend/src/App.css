@@ -598,6 +598,42 @@ td:first-child {
   font-weight: 600;
 }
 
+.delete-document-button {
+  padding: 6px 9px;
+  border: 1px solid #f0d7d5;
+  border-radius: 6px;
+  background: #fff;
+  color: #b44942;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.delete-document-button:hover:not(:disabled) {
+  background: #fff0ef;
+}
+
+.delete-document-button:focus-visible {
+  outline: 3px solid #f4c7c3;
+  outline-offset: 2px;
+}
+
+.delete-document-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
 .empty-state {
   display: flex;
   min-height: 230px;

@@ -19,6 +19,8 @@ class DocumentApiTest extends TestCase
         $this->getJson('/api/documents')->assertUnauthorized();
 
         $this->postJson('/api/documents')->assertUnauthorized();
+
+        $this->deleteJson('/api/documents/1')->assertUnauthorized();
     }
 
     public function test_authenticated_user_can_upload_a_pdf(): void
@@ -81,5 +83,42 @@ class DocumentApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'owner.pdf');
+    }
+
+    public function test_user_can_delete_their_document_and_its_stored_file(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $user->id,
+        ]);
+        Storage::disk('local')->put($document->path, 'document contents');
+
+        Sanctum::actingAs($user);
+
+        $this->deleteJson('/api/documents/'.$document->id)
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('documents', ['id' => $document->id]);
+        Storage::disk('local')->assertMissing($document->path);
+    }
+
+    public function test_user_cannot_delete_another_users_document(): void
+    {
+        Storage::fake('local');
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $owner->id,
+        ]);
+        Storage::disk('local')->put($document->path, 'document contents');
+
+        Sanctum::actingAs($otherUser);
+
+        $this->deleteJson('/api/documents/'.$document->id)
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('documents', ['id' => $document->id]);
+        Storage::disk('local')->assertExists($document->path);
     }
 }
