@@ -40,6 +40,32 @@ async function requestApi(path, token, options = {}) {
   return payload
 }
 
+async function downloadApi(path, token) {
+  let response
+
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, {
+      headers: {
+        Accept: '*/*',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  } catch {
+    throw new Error('Cannot reach the API. Check that the backend is running.')
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    const error = new Error(
+      payload.message ?? 'The document could not be downloaded.',
+    )
+    error.status = response.status
+    throw error
+  }
+
+  return response.blob()
+}
+
 function formatFileSize(size) {
   if (size < 1024 * 1024) {
     return `${Math.max(1, Math.round(size / 1024))} KB`
@@ -61,6 +87,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(Boolean(token))
   const [isUploading, setIsUploading] = useState(false)
   const [deletingDocumentId, setDeletingDocumentId] = useState(null)
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState(null)
 
   useEffect(() => {
     if (!token) {
@@ -234,6 +261,33 @@ function App() {
       }
     } finally {
       setDeletingDocumentId(null)
+    }
+  }
+
+  async function downloadDocument(document) {
+    setDownloadingDocumentId(document.id)
+    setDocumentError('')
+
+    try {
+      const file = await downloadApi(`/documents/${document.id}/download`, token)
+      const url = URL.createObjectURL(file)
+      const link = window.document.createElement('a')
+      link.href = url
+      link.download = document.name
+      link.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setDocumentError(`Could not download ${document.name}: ${error.message}`)
+      }
+    } finally {
+      setDownloadingDocumentId(null)
     }
   }
 
@@ -529,6 +583,15 @@ function App() {
                         <td>{formatFileSize(document.size)}</td>
                         <td><span className="status-pill">Stored</span></td>
                         <td>
+                          <button
+                            className="download-document-button"
+                            type="button"
+                            disabled={downloadingDocumentId === document.id}
+                            onClick={() => downloadDocument(document)}
+                            aria-label={`Download ${document.name}`}
+                          >
+                            {downloadingDocumentId === document.id ? 'Downloading…' : 'Download'}
+                          </button>
                           <button
                             className="delete-document-button"
                             type="button"

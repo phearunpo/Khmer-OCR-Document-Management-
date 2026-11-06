@@ -59,6 +59,7 @@ Sign in to the frontend with an existing user account. For direct API requests, 
 | `POST` | `/api/logout` | Revoke the current bearer token (authentication required) |
 | `GET` | `/api/documents` | List the authenticated user's documents, newest first (authentication required) |
 | `POST` | `/api/documents` | Upload one document using multipart form field `file` (authentication required) |
+| `GET` | `/api/documents/{id}/download` | Download a private document owned by the authenticated user |
 | `DELETE` | `/api/documents/{id}` | Delete one of the authenticated user's documents and its stored file (authentication required) |
 
 Uploads accept PDF, PNG, and JPEG files up to 10 MB. Files are stored privately and are not exposed by a public URL. The API response includes document metadata, not the private storage path.

@@ -20,6 +20,8 @@ class DocumentApiTest extends TestCase
 
         $this->postJson('/api/documents')->assertUnauthorized();
 
+        $this->getJson('/api/documents/1/download')->assertUnauthorized();
+
         $this->deleteJson('/api/documents/1')->assertUnauthorized();
     }
 
@@ -120,5 +122,42 @@ class DocumentApiTest extends TestCase
 
         $this->assertDatabaseHas('documents', ['id' => $document->id]);
         Storage::disk('local')->assertExists($document->path);
+    }
+
+    public function test_user_can_download_their_document(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'khmer-document.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+        Storage::disk('local')->put($document->path, 'private document contents');
+
+        Sanctum::actingAs($user);
+
+        $this->get('/api/documents/'.$document->id.'/download')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('Content-Disposition', 'attachment; filename=khmer-document.pdf')
+            ->assertStreamedContent('private document contents');
+    }
+
+    public function test_user_cannot_download_another_users_document(): void
+    {
+        Storage::fake('local');
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $owner->id,
+        ]);
+        Storage::disk('local')->put($document->path, 'private document contents');
+
+        Sanctum::actingAs($otherUser);
+
+        $this->getJson('/api/documents/'.$document->id.'/download')
+            ->assertNotFound();
     }
 }

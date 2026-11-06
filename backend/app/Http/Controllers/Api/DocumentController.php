@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class DocumentController extends Controller
@@ -48,6 +49,20 @@ class DocumentController extends Controller
         return (new DocumentResource($document))
             ->response()
             ->setStatusCode(201);
+    }
+
+    public function download(Request $request, int $document): StreamedResponse
+    {
+        $document = $request->user()->documents()->findOrFail($document);
+
+        return Storage::disk($document->disk)->download(
+            $document->path,
+            $document->original_name,
+            [
+                'Content-Type' => $document->mime_type,
+                'X-Content-Type-Options' => 'nosniff',
+            ],
+        );
     }
 
     public function destroy(Request $request, int $document): JsonResponse

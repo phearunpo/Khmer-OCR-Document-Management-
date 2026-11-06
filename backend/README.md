@@ -20,6 +20,7 @@ Send the returned token as `Authorization: Bearer YOUR_TOKEN` on authenticated r
 | `POST` | `/api/logout` | Revoke the current bearer token (authentication required) |
 | `GET` | `/api/documents` | List the signed-in user's documents, newest first (authentication required) |
 | `POST` | `/api/documents` | Upload a document as multipart form field `file` (authentication required) |
+| `GET` | `/api/documents/{id}/download` | Download a private document owned by the signed-in user |
 | `DELETE` | `/api/documents/{id}` | Delete one of the signed-in user's documents and its stored file (authentication required) |
 
 PDF, PNG, and JPEG files up to 10 MB are accepted. Uploads are stored on Laravel's private `local` disk. Responses contain document metadata and do not expose storage paths.

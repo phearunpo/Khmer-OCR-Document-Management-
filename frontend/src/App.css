@@ -598,27 +598,42 @@ td:first-child {
   font-weight: 600;
 }
 
+.download-document-button,
 .delete-document-button {
   padding: 6px 9px;
-  border: 1px solid #f0d7d5;
+  border: 1px solid #e1e3ea;
   border-radius: 6px;
   background: #fff;
-  color: #b44942;
   cursor: pointer;
   font: inherit;
   font-size: 10px;
   font-weight: 600;
 }
 
+.download-document-button {
+  color: #5146e5;
+}
+
+.download-document-button:hover:not(:disabled) {
+  background: #f0efff;
+}
+
+.delete-document-button {
+  border-color: #f0d7d5;
+  color: #b44942;
+}
+
 .delete-document-button:hover:not(:disabled) {
   background: #fff0ef;
 }
 
+.download-document-button:focus-visible,
 .delete-document-button:focus-visible {
   outline: 3px solid #f4c7c3;
   outline-offset: 2px;
 }
 
+.download-document-button:disabled,
 .delete-document-button:disabled {
   cursor: wait;
   opacity: 0.65;

@@ -14,6 +14,10 @@ Route::post('/login', [AuthController::class, 'login'])
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth:sanctum');
 
+Route::get('/documents/{document}/download', [DocumentController::class, 'download'])
+    ->middleware('auth:sanctum')
+    ->name('documents.download');
+
 Route::apiResource('documents', DocumentController::class)
     ->only(['index', 'store', 'destroy'])
     ->middleware('auth:sanctum');
