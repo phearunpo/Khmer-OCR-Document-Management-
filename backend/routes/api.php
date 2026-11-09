@@ -15,6 +15,8 @@ Route::post('/register', [AuthController::class, 'register'])
     ->middleware('throttle:6,1');
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth:sanctum');
+Route::post('/logout/others', [AuthController::class, 'logoutOtherTokens'])
+    ->middleware('auth:sanctum');
 
 Route::get('/documents/{document}/download', [DocumentController::class, 'download'])
     ->middleware('auth:sanctum')

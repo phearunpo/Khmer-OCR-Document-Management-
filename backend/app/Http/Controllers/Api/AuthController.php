@@ -64,4 +64,25 @@ class AuthController extends Controller
             'message' => 'Logged out successfully.',
         ]);
     }
+
+    public function logoutOtherTokens(Request $request): JsonResponse
+    {
+        $currentToken = $request->user()->currentAccessToken();
+
+        if (! $currentToken instanceof PersonalAccessToken) {
+            return response()->json([
+                'message' => 'A bearer token is required to revoke other sessions.',
+            ], 422);
+        }
+
+        $revokedSessions = $request->user()
+            ->tokens()
+            ->whereKeyNot($currentToken->getKey())
+            ->delete();
+
+        return response()->json([
+            'message' => 'Other sessions signed out successfully.',
+            'revoked_sessions' => $revokedSessions,
+        ]);
+    }
 }

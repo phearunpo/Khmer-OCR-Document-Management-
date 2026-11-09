@@ -134,4 +134,39 @@ class AuthApiTest extends TestCase
             ->getJson('/api/documents')
             ->assertUnauthorized();
     }
+
+    public function test_user_can_revoke_other_tokens_without_affecting_the_current_or_other_users_tokens(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $currentToken = $user->createToken('current-session')->plainTextToken;
+        $otherToken = $user->createToken('other-session')->plainTextToken;
+        $otherUser->createToken('private-session');
+
+        $this->withToken($currentToken)
+            ->postJson('/api/logout/others')
+            ->assertOk()
+            ->assertJsonPath('revoked_sessions', 1);
+
+        $this->assertDatabaseCount('personal_access_tokens', 2);
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($currentToken)
+            ->getJson('/api/documents')
+            ->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->withToken($otherToken)
+            ->getJson('/api/documents')
+            ->assertUnauthorized();
+
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'tokenable_id' => $otherUser->id,
+            'name' => 'private-session',
+        ]);
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'tokenable_id' => $user->id,
+            'name' => 'current-session',
+        ]);
+    }
 }
