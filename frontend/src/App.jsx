@@ -287,6 +287,15 @@ function App() {
     setIsLoading(true)
   }
 
+  function clearSearchAndFilters() {
+    setQuery('')
+    previousDebouncedQuery.current = ''
+    setDebouncedQuery('')
+    setActiveFilter(filters[0])
+    setCurrentPage(1)
+    setIsLoading(true)
+  }
+
   function handlePageChange(page) {
     if (page === currentPage) {
       return
@@ -842,6 +851,15 @@ function App() {
                     Choose a file
                   </button>
                   )}
+                {(query.trim() || activeFilter !== filters[0]) && (
+                  <button
+                    className="page-button"
+                    type="button"
+                    onClick={clearSearchAndFilters}
+                  >
+                    Clear search and filters
+                  </button>
+                )}
               </div>
             )}
             {pagination.total > 0 && (
