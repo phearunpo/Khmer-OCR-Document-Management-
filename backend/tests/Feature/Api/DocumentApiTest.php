@@ -115,6 +115,26 @@ class DocumentApiTest extends TestCase
             ->assertJsonPath('meta.total', 12);
     }
 
+    public function test_document_list_supports_a_bounded_page_size(): void
+    {
+        $user = User::factory()->create();
+        Document::factory()->count(35)->create([
+            'user_id' => $user->id,
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/documents?per_page=25')
+            ->assertOk()
+            ->assertJsonCount(25, 'data')
+            ->assertJsonPath('meta.per_page', 25)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('meta.total', 35);
+
+        $this->getJson('/api/documents?per_page=101')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('per_page');
+    }
+
     public function test_document_list_can_be_filtered_by_type_and_name(): void
     {
         $user = User::factory()->create();
@@ -147,9 +167,9 @@ class DocumentApiTest extends TestCase
     {
         Sanctum::actingAs(User::factory()->create());
 
-        $this->getJson('/api/documents?page=0&type=Word')
+        $this->getJson('/api/documents?page=0&type=Word&per_page=0')
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['page', 'type']);
+            ->assertJsonValidationErrors(['page', 'per_page', 'type']);
     }
 
     public function test_user_can_delete_their_document_and_its_stored_file(): void

@@ -128,6 +128,7 @@ function App() {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
   const [refreshKey, setRefreshKey] = useState(0)
   const [pagination, setPagination] = useState({
     current_page: 1,
@@ -197,7 +198,10 @@ function App() {
     }
 
     let isCurrent = true
-    const params = new URLSearchParams({ page: String(currentPage) })
+    const params = new URLSearchParams({
+      page: String(currentPage),
+      per_page: String(perPage),
+    })
 
     if (debouncedQuery) {
       params.set('search', debouncedQuery)
@@ -244,7 +248,7 @@ function App() {
           setPagination({
             current_page: currentPage,
             last_page: 1,
-            per_page: 10,
+            per_page: perPage,
             total: 0,
           })
         }
@@ -258,7 +262,7 @@ function App() {
     return () => {
       isCurrent = false
     }
-  }, [activeFilter, currentPage, debouncedQuery, refreshKey, token])
+  }, [activeFilter, currentPage, debouncedQuery, perPage, refreshKey, token])
 
   function reloadDocuments() {
     setIsLoading(true)
@@ -302,6 +306,18 @@ function App() {
     }
 
     setCurrentPage(page)
+    setIsLoading(true)
+  }
+
+  function handlePageSizeChange(event) {
+    const nextPageSize = Number(event.target.value)
+
+    if (nextPageSize === perPage) {
+      return
+    }
+
+    setPerPage(nextPageSize)
+    setCurrentPage(1)
     setIsLoading(true)
   }
 
@@ -873,6 +889,19 @@ function App() {
                   )}{' '}
                   of {pagination.total}
                 </span>
+                <label className="page-size-control">
+                  Rows per page
+                  <select
+                    className="page-size-select"
+                    value={perPage}
+                    onChange={handlePageSizeChange}
+                    disabled={isLoading}
+                  >
+                    {[10, 25, 50, 100].map((pageSize) => (
+                      <option key={pageSize} value={pageSize}>{pageSize}</option>
+                    ))}
+                  </select>
+                </label>
                 <div className="pagination-buttons">
                   <button
                     className="page-button"

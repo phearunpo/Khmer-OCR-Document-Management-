@@ -21,6 +21,7 @@ class DocumentController extends Controller
             'search' => ['sometimes', 'string', 'max:255'],
             'type' => ['sometimes', 'in:PDF,Image'],
             'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
 
         $documents = $request->user()->documents()
@@ -35,7 +36,7 @@ class DocumentController extends Controller
                     : $query->whereIn('mime_type', ['image/png', 'image/jpeg']),
             )
             ->latest('id')
-            ->paginate(10)
+            ->paginate($filters['per_page'] ?? 10)
             ->withQueryString();
 
         return DocumentResource::collection($documents);
