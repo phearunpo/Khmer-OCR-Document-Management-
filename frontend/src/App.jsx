@@ -648,7 +648,7 @@ function App() {
         <div className="sidebar-footer">
           <span className="local-indicator" />
           <div>
-            <strong>Connected</strong>
+            <strong>{user?.name ?? 'Connected'}</strong>
             <span>{user?.email}</span>
           </div>
         </div>
