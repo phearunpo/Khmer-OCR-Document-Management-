@@ -51,7 +51,7 @@ Create an account to receive a Laravel Sanctum bearer token:
 curl.exe -H "Content-Type: application/json" -d '{"name":"Your Name","email":"you@example.com","password":"your-password","password_confirmation":"your-password"}' http://127.0.0.1:8000/api/register
 ```
 
-Sign in to the frontend with an existing user account. For direct API requests, use the returned `token` as `Authorization: Bearer YOUR_TOKEN`. Registration and login are rate limited.
+Register in the frontend or sign in with an existing user account. For direct API requests, use the returned `token` as `Authorization: Bearer YOUR_TOKEN`. Registration and login are rate limited.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |

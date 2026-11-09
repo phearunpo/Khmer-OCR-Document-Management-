@@ -123,6 +123,7 @@ function App() {
   const previousDebouncedQuery = useRef('')
   const [token, setToken] = useState(() => sessionStorage.getItem(tokenStorageKey))
   const [user, setUser] = useState(null)
+  const [authMode, setAuthMode] = useState('login')
   const [documents, setDocuments] = useState([])
   const [activeFilter, setActiveFilter] = useState(filters[0])
   const [query, setQuery] = useState('')
@@ -345,6 +346,37 @@ function App() {
     }
   }
 
+  async function handleRegister(event) {
+    event.preventDefault()
+    setIsLoading(true)
+    setAuthError('')
+
+    const formData = new FormData(event.currentTarget)
+
+    try {
+      const response = await requestApi('/register', null, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: formData.get('name'),
+          email: formData.get('email'),
+          password: formData.get('password'),
+          password_confirmation: formData.get('password_confirmation'),
+        }),
+      })
+      sessionStorage.setItem(tokenStorageKey, response.token)
+      setUser(response.user)
+      setToken(response.token)
+    } catch (error) {
+      setAuthError(error.message)
+      setIsLoading(false)
+    }
+  }
+
+  function toggleAuthMode() {
+    setAuthMode((mode) => (mode === 'login' ? 'register' : 'login'))
+    setAuthError('')
+  }
+
   async function handleLogout() {
     try {
       await requestApi('/logout', token, { method: 'POST' })
@@ -484,7 +516,10 @@ function App() {
   if (!token) {
     return (
       <main className="auth-page">
-        <form className="auth-card" onSubmit={handleLogin}>
+        <form
+          className="auth-card"
+          onSubmit={authMode === 'login' ? handleLogin : handleRegister}
+        >
           <a className="brand auth-brand" href="/" aria-label="KhmerDocs home">
             <span className="brand-mark" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
@@ -506,21 +541,61 @@ function App() {
             <span>KhmerDocs</span>
           </a>
           <p className="eyebrow">DOCUMENT MANAGEMENT</p>
-          <h1>Welcome back</h1>
-          <p className="page-description">Sign in to access your document library.</p>
+          <h1>{authMode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
+          <p className="page-description">
+            {authMode === 'login'
+              ? 'Sign in to access your document library.'
+              : 'Register to start managing your documents.'}
+          </p>
+          {authMode === 'register' && (
+            <label className="auth-field">
+              Name
+              <input name="name" type="text" autoComplete="name" maxLength={255} required />
+            </label>
+          )}
           <label className="auth-field">
             Email
             <input name="email" type="email" autoComplete="username" required />
           </label>
           <label className="auth-field">
             Password
-            <input name="password" type="password" autoComplete="current-password" required />
+            <input
+              name="password"
+              type="password"
+              autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+              minLength={authMode === 'register' ? 8 : undefined}
+              required
+            />
           </label>
+          {authMode === 'register' && (
+            <label className="auth-field">
+              Confirm password
+              <input
+                name="password_confirmation"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+            </label>
+          )}
           {authError && <p className="auth-error" role="alert">{authError}</p>}
           <button className="upload-button auth-submit" type="submit" disabled={isLoading}>
-            {isLoading ? 'Signing in…' : 'Sign in'}
+            {isLoading
+              ? authMode === 'login' ? 'Signing in…' : 'Creating account…'
+              : authMode === 'login' ? 'Sign in' : 'Create account'}
           </button>
-          <p className="auth-note">Ask your administrator for an account.</p>
+          <p className="auth-note">
+            {authMode === 'login' ? 'Need an account? ' : 'Already registered? '}
+            <button
+              className="auth-mode-toggle"
+              type="button"
+              onClick={toggleAuthMode}
+              disabled={isLoading}
+            >
+              {authMode === 'login' ? 'Create one' : 'Sign in'}
+            </button>
+          </p>
         </form>
       </main>
     )

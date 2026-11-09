@@ -86,6 +86,25 @@
   text-align: center;
 }
 
+.auth-mode-toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5146e5;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+}
+
+.auth-mode-toggle:focus-visible {
+  outline: 2px solid #c7c4ff;
+  outline-offset: 2px;
+}
+
+.auth-mode-toggle:disabled {
+  cursor: wait;
+}
+
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
