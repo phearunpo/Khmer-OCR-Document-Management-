@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { validateDocumentFiles } from './documentFiles.js'
 import './App.css'
 
 const filters = ['All documents', 'PDFs', 'Images']
@@ -326,15 +327,22 @@ function App() {
       return
     }
 
-    setIsUploading(true)
-    setUploadError('')
-    const failures = []
+    const { acceptedFiles, errors } = validateDocumentFiles(selectedFiles)
+    const failures = [...errors]
 
-    for (const [index, file] of selectedFiles.entries()) {
+    if (acceptedFiles.length === 0) {
+      setUploadError(failures.join(' '))
+      return
+    }
+
+    setIsUploading(true)
+    setUploadError(failures.join(' '))
+
+    for (const [index, file] of acceptedFiles.entries()) {
       setUploadProgress({
         fileName: file.name,
         fileNumber: index + 1,
-        fileCount: selectedFiles.length,
+        fileCount: acceptedFiles.length,
         percent: 0,
       })
 
@@ -343,14 +351,14 @@ function App() {
           setUploadProgress({
             fileName: file.name,
             fileNumber: index + 1,
-            fileCount: selectedFiles.length,
+            fileCount: acceptedFiles.length,
             percent,
           })
         })
         setUploadProgress({
           fileName: file.name,
           fileNumber: index + 1,
-          fileCount: selectedFiles.length,
+          fileCount: acceptedFiles.length,
           percent: 100,
         })
       } catch (error) {

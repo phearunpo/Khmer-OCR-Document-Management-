@@ -21,5 +21,6 @@ Configure the backend `FRONTEND_URL` to match the origin shown by Vite. Users mu
 
 ```powershell
 npm run lint
+npm test
 npm run build
 ```
