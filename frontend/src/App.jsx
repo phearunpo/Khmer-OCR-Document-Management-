@@ -391,6 +391,7 @@ function App() {
       }
     }
 
+    setCurrentPage(1)
     reloadDocuments()
 
     setUploadError(failures.join(' '))
