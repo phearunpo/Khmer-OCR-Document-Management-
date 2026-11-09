@@ -262,6 +262,7 @@ function App() {
 
   function reloadDocuments() {
     setIsLoading(true)
+    setDocumentError('')
     setRefreshKey((key) => key + 1)
   }
 
@@ -624,9 +625,17 @@ function App() {
             </div>
           )}
           {documentError && (
-            <p className="upload-error" role="alert">
-              {documentError}
-            </p>
+            <div className="document-error-actions">
+              <p className="upload-error" role="alert">{documentError}</p>
+              <button
+                className="page-button"
+                type="button"
+                disabled={isLoading}
+                onClick={reloadDocuments}
+              >
+                Retry
+              </button>
+            </div>
           )}
 
           <div className="stats-grid" aria-label="Document totals">

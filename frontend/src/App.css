@@ -307,6 +307,17 @@ h1 {
   font-size: 12px;
 }
 
+.document-error-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.document-error-actions .upload-error {
+  margin: 0;
+}
+
 .upload-progress {
   display: grid;
   gap: 8px;
