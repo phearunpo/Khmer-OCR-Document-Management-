@@ -120,11 +120,13 @@ function formatFileSize(size) {
 
 function App() {
   const fileInput = useRef(null)
+  const previousDebouncedQuery = useRef('')
   const [token, setToken] = useState(() => sessionStorage.getItem(tokenStorageKey))
   const [user, setUser] = useState(null)
   const [documents, setDocuments] = useState([])
   const [activeFilter, setActiveFilter] = useState(filters[0])
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [refreshKey, setRefreshKey] = useState(0)
   const [pagination, setPagination] = useState({
@@ -176,16 +178,29 @@ function App() {
   }, [token])
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const nextQuery = query.trim()
+
+      if (nextQuery !== previousDebouncedQuery.current) {
+        previousDebouncedQuery.current = nextQuery
+        setDebouncedQuery(nextQuery)
+        setCurrentPage(1)
+      }
+    }, 300)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [query])
+
+  useEffect(() => {
     if (!token) {
       return undefined
     }
 
     let isCurrent = true
     const params = new URLSearchParams({ page: String(currentPage) })
-    const search = query.trim()
 
-    if (search) {
-      params.set('search', search)
+    if (debouncedQuery) {
+      params.set('search', debouncedQuery)
     }
 
     if (activeFilter === 'PDFs') {
@@ -243,7 +258,7 @@ function App() {
     return () => {
       isCurrent = false
     }
-  }, [activeFilter, currentPage, query, refreshKey, token])
+  }, [activeFilter, currentPage, debouncedQuery, refreshKey, token])
 
   function reloadDocuments() {
     setIsLoading(true)
@@ -253,12 +268,11 @@ function App() {
   function handleSearchChange(event) {
     const nextQuery = event.target.value
 
-    if (nextQuery === query && currentPage === 1) {
+    if (nextQuery === query) {
       return
     }
 
     setQuery(nextQuery)
-    setCurrentPage(1)
     setIsLoading(true)
   }
 
