@@ -40,6 +40,49 @@ async function requestApi(path, token, options = {}) {
   return payload
 }
 
+function uploadApi(file, token, onProgress) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest()
+    const body = new FormData()
+    body.append('file', file)
+
+    request.open('POST', `${apiBaseUrl}/documents`)
+    request.setRequestHeader('Accept', 'application/json')
+    request.setRequestHeader('Authorization', `Bearer ${token}`)
+    request.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        onProgress(Math.round((event.loaded / event.total) * 100))
+      }
+    })
+    request.addEventListener('error', () => {
+      reject(new Error('Cannot reach the API. Check that the backend is running.'))
+    })
+    request.addEventListener('load', () => {
+      let payload
+
+      try {
+        payload = JSON.parse(request.responseText)
+      } catch {
+        reject(new Error('The API returned an invalid upload response.'))
+        return
+      }
+
+      if (request.status < 200 || request.status >= 300) {
+        const validationMessage = Object.values(payload.errors ?? {}).flat()[0]
+        const error = new Error(
+          validationMessage ?? payload.message ?? 'The upload could not be completed.',
+        )
+        error.status = request.status
+        reject(error)
+        return
+      }
+
+      resolve(payload)
+    })
+    request.send(body)
+  })
+}
+
 async function downloadApi(path, token) {
   let response
 
@@ -90,6 +133,7 @@ function App() {
     total: 0,
   })
   const [uploadError, setUploadError] = useState('')
+  const [uploadProgress, setUploadProgress] = useState(null)
   const [documentError, setDocumentError] = useState('')
   const [authError, setAuthError] = useState('')
   const [isLoading, setIsLoading] = useState(Boolean(token))
@@ -286,12 +330,29 @@ function App() {
     setUploadError('')
     const failures = []
 
-    for (const file of selectedFiles) {
-      const body = new FormData()
-      body.append('file', file)
+    for (const [index, file] of selectedFiles.entries()) {
+      setUploadProgress({
+        fileName: file.name,
+        fileNumber: index + 1,
+        fileCount: selectedFiles.length,
+        percent: 0,
+      })
 
       try {
-        await requestApi('/documents', token, { method: 'POST', body })
+        await uploadApi(file, token, (percent) => {
+          setUploadProgress({
+            fileName: file.name,
+            fileNumber: index + 1,
+            fileCount: selectedFiles.length,
+            percent,
+          })
+        })
+        setUploadProgress({
+          fileName: file.name,
+          fileNumber: index + 1,
+          fileCount: selectedFiles.length,
+          percent: 100,
+        })
       } catch (error) {
         if (error.status === 401) {
           sessionStorage.removeItem(tokenStorageKey)
@@ -299,6 +360,7 @@ function App() {
           setUser(null)
           setDocuments([])
           setAuthError('Your session expired. Please sign in again.')
+          setUploadProgress(null)
           setIsUploading(false)
           return
         }
@@ -310,6 +372,7 @@ function App() {
     reloadDocuments()
 
     setUploadError(failures.join(' '))
+    setUploadProgress(null)
     setIsUploading(false)
   }
 
@@ -515,6 +578,27 @@ function App() {
             <p className="upload-error" role="alert">
               {uploadError}
             </p>
+          )}
+          {uploadProgress && (
+            <div className="upload-progress" role="status">
+              <div className="upload-progress-label">
+                <span>
+                  Uploading {uploadProgress.fileNumber} of {uploadProgress.fileCount}:{' '}
+                  {uploadProgress.fileName}
+                </span>
+                <span>{uploadProgress.percent}%</span>
+              </div>
+              <div
+                className="upload-progress-track"
+                role="progressbar"
+                aria-label={`Uploading ${uploadProgress.fileName}`}
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow={uploadProgress.percent}
+              >
+                <span style={{ width: `${uploadProgress.percent}%` }} />
+              </div>
+            </div>
           )}
           {documentError && (
             <p className="upload-error" role="alert">

@@ -307,6 +307,41 @@ h1 {
   font-size: 12px;
 }
 
+.upload-progress {
+  display: grid;
+  gap: 8px;
+  margin: -14px 0 20px;
+}
+
+.upload-progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #666b7d;
+  font-size: 11px;
+}
+
+.upload-progress-label span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-progress-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e8e9f4;
+}
+
+.upload-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #5146e5;
+  transition: width 120ms ease;
+}
+
 .upload-button,
 .empty-upload-button {
   display: inline-flex;

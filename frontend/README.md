@@ -1,6 +1,6 @@
 # KhmerDocs frontend
 
-React and Vite dashboard for the Khmer OCR document management API.
+React and Vite dashboard for the Khmer OCR document management API. The document library supports server-side pagination, search, type filters, downloads, deletion, and upload progress.
 
 ## Run locally
 
