@@ -45,16 +45,17 @@ Open the local URL printed by Vite. The frontend connects to the API at `http://
 
 ## Authentication and document API
 
-Sign in with an existing user account to receive a Laravel Sanctum bearer token:
+Create an account to receive a Laravel Sanctum bearer token:
 
 ```powershell
-curl.exe -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"your-password"}' http://127.0.0.1:8000/api/login
+curl.exe -H "Content-Type: application/json" -d '{"name":"Your Name","email":"you@example.com","password":"your-password","password_confirmation":"your-password"}' http://127.0.0.1:8000/api/register
 ```
 
-Sign in to the frontend with an existing user account. For direct API requests, use the returned `token` as `Authorization: Bearer YOUR_TOKEN`. Login is rate limited. Registration is not implemented; provision user accounts separately.
+Sign in to the frontend with an existing user account. For direct API requests, use the returned `token` as `Authorization: Bearer YOUR_TOKEN`. Registration and login are rate limited.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
+| `POST` | `/api/register` | Create an account and receive a bearer token |
 | `POST` | `/api/login` | Exchange email and password for a bearer token |
 | `POST` | `/api/logout` | Revoke the current bearer token (authentication required) |
 | `GET` | `/api/documents` | List 10 documents per page by default; accepts `page`, `per_page` (1-100), `search`, and `type=PDF\|Image` (authentication required) |

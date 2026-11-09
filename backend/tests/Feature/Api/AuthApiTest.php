@@ -10,6 +10,53 @@ class AuthApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_user_can_register_and_receive_a_sanctum_token(): void
+    {
+        $response = $this->postJson('/api/register', [
+            'name' => 'Khmer Reader',
+            'email' => 'reader@example.com',
+            'password' => 'correct-password',
+            'password_confirmation' => 'correct-password',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('token_type', 'Bearer')
+            ->assertJsonPath('user.name', 'Khmer Reader')
+            ->assertJsonPath('user.email', 'reader@example.com')
+            ->assertJsonMissingPath('user.password');
+
+        $this->assertDatabaseHas('users', [
+            'name' => 'Khmer Reader',
+            'email' => 'reader@example.com',
+        ]);
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+        $this->assertNotSame(
+            'correct-password',
+            User::query()->where('email', 'reader@example.com')->value('password'),
+        );
+
+        $this->withToken($response->json('token'))
+            ->getJson('/api/documents')
+            ->assertOk();
+    }
+
+    public function test_registration_rejects_duplicate_email_and_unconfirmed_password(): void
+    {
+        User::factory()->create(['email' => 'reader@example.com']);
+
+        $this->postJson('/api/register', [
+            'name' => 'Another Reader',
+            'email' => 'reader@example.com',
+            'password' => 'correct-password',
+            'password_confirmation' => 'different-password',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['email', 'password']);
+
+        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
     public function test_user_can_login_and_receive_a_sanctum_token(): void
     {
         $user = User::factory()->create([
