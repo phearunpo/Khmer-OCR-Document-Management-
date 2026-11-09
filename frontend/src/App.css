@@ -276,6 +276,27 @@
   outline-offset: 2px;
 }
 
+.logout-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.session-notice {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  border: 1px solid #cde9d9;
+  border-radius: 7px;
+  background: #f0faf4;
+  color: #26734b;
+  font-size: 12px;
+}
+
+.session-notice-error {
+  border-color: #f0d2cf;
+  background: #fff6f5;
+  color: #bd443b;
+}
+
 .page-content {
   width: min(1120px, 100%);
   margin: 0 auto;
@@ -929,6 +950,10 @@ td:first-child {
 }
 
 @media (max-width: 540px) {
+  .language-chip {
+    display: none;
+  }
+
   .page-heading {
     flex-direction: column;
     gap: 16px;

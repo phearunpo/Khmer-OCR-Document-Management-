@@ -141,8 +141,10 @@ function App() {
   const [uploadProgress, setUploadProgress] = useState(null)
   const [documentError, setDocumentError] = useState('')
   const [authError, setAuthError] = useState('')
+  const [sessionNotice, setSessionNotice] = useState(null)
   const [isLoading, setIsLoading] = useState(Boolean(token))
   const [isUploading, setIsUploading] = useState(false)
+  const [isRevokingSessions, setIsRevokingSessions] = useState(false)
   const [deletingDocumentId, setDeletingDocumentId] = useState(null)
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null)
 
@@ -375,6 +377,41 @@ function App() {
   function toggleAuthMode() {
     setAuthMode((mode) => (mode === 'login' ? 'register' : 'login'))
     setAuthError('')
+  }
+
+  async function revokeOtherSessions() {
+    if (!window.confirm('Sign out all other sessions? This device will remain signed in.')) {
+      return
+    }
+
+    setIsRevokingSessions(true)
+    setSessionNotice(null)
+
+    try {
+      const response = await requestApi('/logout/others', token, { method: 'POST' })
+      const count = response.revoked_sessions
+      setSessionNotice({
+        message: count === 0
+          ? 'No other sessions were signed out.'
+          : `${count} other session${count === 1 ? '' : 's'} signed out.`,
+        isError: false,
+      })
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setSessionNotice({
+          message: `Could not sign out other sessions: ${error.message}`,
+          isError: true,
+        })
+      }
+    } finally {
+      setIsRevokingSessions(false)
+    }
   }
 
   async function handleLogout() {
@@ -659,6 +696,14 @@ function App() {
           <span className="breadcrumb">Workspace <span>/</span> Documents</span>
           <div className="topbar-actions">
             <span className="language-chip">ភាសាខ្មែរ</span>
+            <button
+              className="logout-button"
+              type="button"
+              onClick={revokeOtherSessions}
+              disabled={isRevokingSessions}
+            >
+              {isRevokingSessions ? 'Signing out…' : 'Sign out others'}
+            </button>
             <button className="logout-button" type="button" onClick={handleLogout}>
               Sign out
             </button>
@@ -666,6 +711,14 @@ function App() {
         </header>
 
         <section className="page-content">
+          {sessionNotice && (
+            <p
+              className={`session-notice${sessionNotice.isError ? ' session-notice-error' : ''}`}
+              role={sessionNotice.isError ? 'alert' : 'status'}
+            >
+              {sessionNotice.message}
+            </p>
+          )}
           <div className="page-heading">
             <div>
               <p className="eyebrow">DOCUMENT MANAGEMENT</p>
