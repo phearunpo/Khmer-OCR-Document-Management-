@@ -125,6 +125,7 @@ function App() {
   const [user, setUser] = useState(null)
   const [authMode, setAuthMode] = useState('login')
   const [documents, setDocuments] = useState([])
+  const [documentSummary, setDocumentSummary] = useState(null)
   const [activeFilter, setActiveFilter] = useState(filters[0])
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -140,6 +141,7 @@ function App() {
   const [uploadError, setUploadError] = useState('')
   const [uploadProgress, setUploadProgress] = useState(null)
   const [documentError, setDocumentError] = useState('')
+  const [summaryError, setSummaryError] = useState('')
   const [authError, setAuthError] = useState('')
   const [sessionNotice, setSessionNotice] = useState(null)
   const [isLoading, setIsLoading] = useState(Boolean(token))
@@ -171,6 +173,7 @@ function App() {
           setToken(null)
           setUser(null)
           setDocuments([])
+          setDocumentSummary(null)
           setAuthError('Your session expired. Please sign in again.')
         } else {
           setAuthError(error.message)
@@ -180,6 +183,41 @@ function App() {
       isCurrent = false
     }
   }, [token])
+
+  useEffect(() => {
+    if (!token) {
+      return undefined
+    }
+
+    let isCurrent = true
+
+    requestApi('/documents/summary', token)
+      .then((response) => {
+        if (isCurrent) {
+          setDocumentSummary(response.data)
+          setSummaryError('')
+        }
+      })
+      .catch((error) => {
+        if (!isCurrent) {
+          return
+        }
+
+        if (error.status === 401) {
+          sessionStorage.removeItem(tokenStorageKey)
+          setToken(null)
+          setUser(null)
+          setDocuments([])
+          setAuthError('Your session expired. Please sign in again.')
+        } else {
+          setSummaryError(error.message)
+        }
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [refreshKey, token])
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -339,6 +377,8 @@ function App() {
           password: formData.get('password'),
         }),
       })
+      setDocumentSummary(null)
+      setSummaryError('')
       sessionStorage.setItem(tokenStorageKey, response.token)
       setUser(response.user)
       setToken(response.token)
@@ -365,6 +405,8 @@ function App() {
           password_confirmation: formData.get('password_confirmation'),
         }),
       })
+      setDocumentSummary(null)
+      setSummaryError('')
       sessionStorage.setItem(tokenStorageKey, response.token)
       setUser(response.user)
       setToken(response.token)
@@ -402,6 +444,7 @@ function App() {
         setToken(null)
         setUser(null)
         setDocuments([])
+        setDocumentSummary(null)
         setAuthError('Your session expired. Please sign in again.')
       } else {
         setSessionNotice({
@@ -426,6 +469,7 @@ function App() {
     setToken(null)
     setUser(null)
     setDocuments([])
+    setDocumentSummary(null)
   }
 
   async function addFiles(event) {
@@ -546,9 +590,6 @@ function App() {
       setDownloadingDocumentId(null)
     }
   }
-
-  const pdfCount = documents.filter((document) => document.type === 'PDF').length
-  const imageCount = documents.length - pdfCount
 
   if (!token) {
     return (
@@ -790,6 +831,11 @@ function App() {
               </button>
             </div>
           )}
+          {summaryError && (
+            <p className="upload-error" role="alert">
+              Could not load document totals: {summaryError}
+            </p>
+          )}
 
           <div className="stats-grid" aria-label="Document totals">
             <article className="stat-card">
@@ -810,12 +856,12 @@ function App() {
                 </svg>
               </span>
               <span className="stat-label">Total documents</span>
-              <strong className="stat-value">{pagination.total}</strong>
+              <strong className="stat-value">{documentSummary?.total ?? '—'}</strong>
             </article>
             <article className="stat-card">
               <span className="stat-icon pdf-icon" aria-hidden="true">PDF</span>
-              <span className="stat-label">PDFs on this page</span>
-              <strong className="stat-value">{pdfCount}</strong>
+              <span className="stat-label">PDFs in library</span>
+              <strong className="stat-value">{documentSummary?.pdf ?? '—'}</strong>
             </article>
             <article className="stat-card">
               <span className="stat-icon image-icon" aria-hidden="true">
@@ -839,8 +885,8 @@ function App() {
                   />
                 </svg>
               </span>
-              <span className="stat-label">Images on this page</span>
-              <strong className="stat-value">{imageCount}</strong>
+              <span className="stat-label">Images in library</span>
+              <strong className="stat-value">{documentSummary?.image ?? '—'}</strong>
             </article>
           </div>
 
