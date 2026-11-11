@@ -128,6 +128,14 @@ function App() {
   const [profileForm, setProfileForm] = useState({ name: '', email: '' })
   const [profileError, setProfileError] = useState('')
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+  const [isPasswordEditorOpen, setIsPasswordEditorOpen] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+  })
+  const [passwordError, setPasswordError] = useState('')
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
   const [documents, setDocuments] = useState([])
   const [documentSummary, setDocumentSummary] = useState(null)
   const [activeFilter, setActiveFilter] = useState(filters[0])
@@ -235,6 +243,12 @@ function App() {
           setToken(null)
           setUser(null)
           setDocuments([])
+          setPasswordForm({
+            current_password: '',
+            password: '',
+            password_confirmation: '',
+          })
+          setIsPasswordEditorOpen(false)
           setAuthError('Your session expired. Please sign in again.')
         } else {
           setSummaryError(error.message)
@@ -312,6 +326,12 @@ function App() {
           setToken(null)
           setUser(null)
           setDocuments([])
+          setPasswordForm({
+            current_password: '',
+            password: '',
+            password_confirmation: '',
+          })
+          setIsPasswordEditorOpen(false)
           setAuthError('Your session expired. Please sign in again.')
         } else {
           setDocumentError(error.message)
@@ -500,6 +520,68 @@ function App() {
     }
   }
 
+  function openPasswordEditor() {
+    setPasswordForm({
+      current_password: '',
+      password: '',
+      password_confirmation: '',
+    })
+    setPasswordError('')
+    setIsPasswordEditorOpen(true)
+  }
+
+  function closePasswordEditor() {
+    if (isUpdatingPassword) {
+      return
+    }
+
+    setPasswordForm({
+      current_password: '',
+      password: '',
+      password_confirmation: '',
+    })
+    setPasswordError('')
+    setIsPasswordEditorOpen(false)
+  }
+
+  async function handlePasswordUpdate(event) {
+    event.preventDefault()
+    setIsUpdatingPassword(true)
+    setPasswordError('')
+
+    try {
+      const response = await requestApi('/user/password', token, {
+        method: 'PUT',
+        body: JSON.stringify(passwordForm),
+      })
+      setPasswordForm({
+        current_password: '',
+        password: '',
+        password_confirmation: '',
+      })
+      setIsPasswordEditorOpen(false)
+      setSessionNotice({ message: response.message, isError: false })
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setPasswordForm({
+          current_password: '',
+          password: '',
+          password_confirmation: '',
+        })
+        setIsPasswordEditorOpen(false)
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setPasswordError(error.message)
+      }
+    } finally {
+      setIsUpdatingPassword(false)
+    }
+  }
+
   async function revokeOtherSessions() {
     if (!window.confirm('Sign out all other sessions? This device will remain signed in.')) {
       return
@@ -549,6 +631,12 @@ function App() {
     setUser(null)
     setDocuments([])
     setDocumentSummary(null)
+    setPasswordForm({
+      current_password: '',
+      password: '',
+      password_confirmation: '',
+    })
+    setIsPasswordEditorOpen(false)
   }
 
   async function addFiles(event) {
@@ -892,6 +980,14 @@ function App() {
               disabled={!user}
             >
               Edit profile
+            </button>
+            <button
+              className="logout-button"
+              type="button"
+              onClick={openPasswordEditor}
+              disabled={!user}
+            >
+              Change password
             </button>
             <button
               className="logout-button"
@@ -1401,6 +1497,87 @@ function App() {
                 disabled={isUpdatingProfile}
               >
                 {isUpdatingProfile ? 'Saving…' : 'Save profile'}
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+      {isPasswordEditorOpen && (
+        <div
+          className="preview-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closePasswordEditor()
+            }
+          }}
+        >
+          <section
+            className="profile-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="password-title"
+          >
+            <header className="preview-header">
+              <h2 id="password-title">Change password</h2>
+              <button
+                className="preview-close-button"
+                type="button"
+                disabled={isUpdatingPassword}
+                onClick={closePasswordEditor}
+              >
+                Close
+              </button>
+            </header>
+            <form className="profile-form" onSubmit={handlePasswordUpdate}>
+              <label className="auth-field">
+                Current password
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={passwordForm.current_password}
+                  onChange={(event) => setPasswordForm({
+                    ...passwordForm,
+                    current_password: event.target.value,
+                  })}
+                />
+              </label>
+              <label className="auth-field">
+                New password
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                  value={passwordForm.password}
+                  onChange={(event) => setPasswordForm({
+                    ...passwordForm,
+                    password: event.target.value,
+                  })}
+                />
+              </label>
+              <label className="auth-field">
+                Confirm new password
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                  value={passwordForm.password_confirmation}
+                  onChange={(event) => setPasswordForm({
+                    ...passwordForm,
+                    password_confirmation: event.target.value,
+                  })}
+                />
+              </label>
+              {passwordError && <p className="auth-error" role="alert">{passwordError}</p>}
+              <button
+                className="upload-button auth-submit"
+                type="submit"
+                disabled={isUpdatingPassword}
+              >
+                {isUpdatingPassword ? 'Updating…' : 'Update password'}
               </button>
             </form>
           </section>

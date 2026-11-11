@@ -1090,6 +1090,24 @@ td:first-child {
 }
 
 @media (max-width: 540px) {
+  .topbar {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+
+  .topbar-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .logout-button {
+    padding: 6px;
+    font-size: 10px;
+  }
+
   .preview-overlay {
     padding: 8px;
   }
