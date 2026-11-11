@@ -41,7 +41,13 @@ class DocumentController extends Controller
             'type' => ['sometimes', 'in:PDF,Image'],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'sort' => ['sometimes', 'in:name,date'],
+            'direction' => ['sometimes', 'in:asc,desc'],
         ]);
+        $sortColumn = ($filters['sort'] ?? 'date') === 'name'
+            ? 'original_name'
+            : 'created_at';
+        $sortDirection = $filters['direction'] ?? 'desc';
 
         $documents = $request->user()->documents()
             ->when(
@@ -54,7 +60,8 @@ class DocumentController extends Controller
                     ? $query->where('mime_type', 'application/pdf')
                     : $query->whereIn('mime_type', ['image/png', 'image/jpeg']),
             )
-            ->latest('id')
+            ->orderBy($sortColumn, $sortDirection)
+            ->orderByDesc('id')
             ->paginate($filters['per_page'] ?? 10)
             ->withQueryString();
 

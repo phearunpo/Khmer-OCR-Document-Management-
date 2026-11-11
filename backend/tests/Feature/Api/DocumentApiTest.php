@@ -184,6 +184,24 @@ class DocumentApiTest extends TestCase
             ->assertJsonValidationErrors('per_page');
     }
 
+    public function test_document_list_can_be_sorted_by_name(): void
+    {
+        $user = User::factory()->create();
+        foreach (['charlie.pdf', 'alpha.pdf', 'bravo.pdf'] as $name) {
+            Document::factory()->create([
+                'user_id' => $user->id,
+                'original_name' => $name,
+            ]);
+        }
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/documents?sort=name&direction=asc')
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'alpha.pdf')
+            ->assertJsonPath('data.1.name', 'bravo.pdf')
+            ->assertJsonPath('data.2.name', 'charlie.pdf');
+    }
+
     public function test_document_list_can_be_filtered_by_type_and_name(): void
     {
         $user = User::factory()->create();
@@ -216,9 +234,9 @@ class DocumentApiTest extends TestCase
     {
         Sanctum::actingAs(User::factory()->create());
 
-        $this->getJson('/api/documents?page=0&type=Word&per_page=0')
+        $this->getJson('/api/documents?page=0&type=Word&per_page=0&sort=invalid&direction=forward')
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['page', 'per_page', 'type']);
+            ->assertJsonValidationErrors(['page', 'per_page', 'sort', 'direction', 'type']);
     }
 
     public function test_user_can_delete_their_document_and_its_stored_file(): void
