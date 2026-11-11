@@ -28,6 +28,7 @@ Send the returned token as `Authorization: Bearer YOUR_TOKEN` on authenticated r
 | `POST` | `/api/logout/others` | Revoke the signed-in user's other bearer tokens |
 | `GET` | `/api/documents/summary` | Return the signed-in user's document totals by type |
 | `PUT` | `/api/user` | Update the signed-in user's name and email |
+| `PUT` | `/api/user/password` | Change the signed-in user's password |
 | `GET` | `/api/documents` | List 10 documents per page by default; accepts `page`, `per_page` (1-100), `search`, `type=PDF\|Image`, `sort=name\|date`, and `direction=asc\|desc` (authentication required) |
 | `POST` | `/api/documents` | Upload a document as multipart form field `file` (authentication required) |
 | `PATCH` | `/api/documents/{id}` | Rename one of the signed-in user's documents |

@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AuthApiTest extends TestCase
@@ -161,6 +162,75 @@ class AuthApiTest extends TestCase
             'name' => 'Updated Name',
             'email' => 'reader@example.com',
         ])->assertUnauthorized();
+    }
+
+    public function test_user_can_change_password_with_their_current_password(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'old-password',
+        ]);
+        $token = $user->createToken('password-test')->plainTextToken;
+
+        $this->withToken($token)
+            ->putJson('/api/user/password', [
+                'current_password' => 'old-password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Password updated successfully.');
+
+        $this->assertTrue(Hash::check(
+            'new-password',
+            User::query()->findOrFail($user->id)->password,
+        ));
+        $this->assertFalse(Hash::check(
+            'old-password',
+            User::query()->findOrFail($user->id)->password,
+        ));
+    }
+
+    public function test_password_change_rejects_an_incorrect_current_password(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'old-password',
+        ]);
+        $token = $user->createToken('password-test')->plainTextToken;
+
+        $this->withToken($token)
+            ->putJson('/api/user/password', [
+                'current_password' => 'incorrect-password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('current_password');
+
+        $this->assertTrue(Hash::check(
+            'old-password',
+            User::query()->findOrFail($user->id)->password,
+        ));
+    }
+
+    public function test_password_change_requires_authentication_and_confirmation(): void
+    {
+        $this->putJson('/api/user/password', [
+            'current_password' => 'old-password',
+            'password' => 'new-password',
+            'password_confirmation' => 'different-password',
+        ])->assertUnauthorized();
+
+        $user = User::factory()->create(['password' => 'old-password']);
+        $token = $user->createToken('password-test')->plainTextToken;
+
+        $this->withToken($token)
+            ->putJson('/api/user/password', [
+                'current_password' => 'old-password',
+                'password' => 'new-password',
+                'password_confirmation' => 'different-password',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('password');
     }
 
     public function test_frontend_origin_is_allowed_to_call_the_api(): void

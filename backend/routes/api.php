@@ -10,6 +10,8 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 Route::put('/user', [AuthController::class, 'updateProfile'])
     ->middleware('auth:sanctum');
+Route::put('/user/password', [AuthController::class, 'updatePassword'])
+    ->middleware('auth:sanctum');
 
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:6,1');

@@ -61,6 +61,7 @@ Register in the frontend or sign in with an existing user account. For direct AP
 | `POST` | `/api/logout/others` | Revoke the authenticated user's other bearer tokens |
 | `GET` | `/api/documents/summary` | Return the authenticated user's document totals by type |
 | `PUT` | `/api/user` | Update the authenticated user's name and email |
+| `PUT` | `/api/user/password` | Change the authenticated user's password |
 | `GET` | `/api/documents` | List 10 documents per page by default; accepts `page`, `per_page` (1-100), `search`, `type=PDF\|Image`, `sort=name\|date`, and `direction=asc\|desc` (authentication required) |
 | `POST` | `/api/documents` | Upload one document using multipart form field `file` (authentication required) |
 | `PATCH` | `/api/documents/{id}` | Rename one of the authenticated user's documents |
