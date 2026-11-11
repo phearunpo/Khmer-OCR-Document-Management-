@@ -107,6 +107,62 @@ class AuthApiTest extends TestCase
             ->assertJsonValidationErrors(['email', 'password']);
     }
 
+    public function test_user_can_update_their_profile_and_keep_the_same_email(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Original Name',
+            'email' => 'reader@example.com',
+        ]);
+        $token = $user->createToken('profile-test')->plainTextToken;
+
+        $this->withToken($token)
+            ->putJson('/api/user', [
+                'name' => 'Updated Name',
+                'email' => 'reader@example.com',
+            ])
+            ->assertOk()
+            ->assertExactJson([
+                'data' => [
+                    'id' => $user->id,
+                    'name' => 'Updated Name',
+                    'email' => 'reader@example.com',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'Updated Name',
+            'email' => 'reader@example.com',
+        ]);
+    }
+
+    public function test_profile_update_rejects_an_email_owned_by_another_user(): void
+    {
+        $user = User::factory()->create(['email' => 'reader@example.com']);
+        User::factory()->create(['email' => 'other@example.com']);
+        $token = $user->createToken('profile-test')->plainTextToken;
+
+        $this->withToken($token)
+            ->putJson('/api/user', [
+                'name' => 'Updated Name',
+                'email' => 'other@example.com',
+            ])->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => 'reader@example.com',
+        ]);
+    }
+
+    public function test_profile_update_requires_authentication(): void
+    {
+        $this->putJson('/api/user', [
+            'name' => 'Updated Name',
+            'email' => 'reader@example.com',
+        ])->assertUnauthorized();
+    }
+
     public function test_frontend_origin_is_allowed_to_call_the_api(): void
     {
         $this->withHeaders([

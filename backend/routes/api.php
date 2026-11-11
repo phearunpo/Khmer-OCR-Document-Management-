@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+Route::put('/user', [AuthController::class, 'updateProfile'])
+    ->middleware('auth:sanctum');
 
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:6,1');
