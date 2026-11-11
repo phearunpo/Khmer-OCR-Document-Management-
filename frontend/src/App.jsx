@@ -129,6 +129,7 @@ function App() {
   const [activeFilter, setActiveFilter] = useState(filters[0])
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [sortOrder, setSortOrder] = useState('date-desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -243,6 +244,9 @@ function App() {
       page: String(currentPage),
       per_page: String(perPage),
     })
+    const [sort, direction] = sortOrder.split('-')
+    params.set('sort', sort)
+    params.set('direction', direction)
 
     if (debouncedQuery) {
       params.set('search', debouncedQuery)
@@ -303,7 +307,7 @@ function App() {
     return () => {
       isCurrent = false
     }
-  }, [activeFilter, currentPage, debouncedQuery, perPage, refreshKey, token])
+  }, [activeFilter, currentPage, debouncedQuery, perPage, refreshKey, sortOrder, token])
 
   function reloadDocuments() {
     setIsLoading(true)
@@ -358,6 +362,18 @@ function App() {
     }
 
     setPerPage(nextPageSize)
+    setCurrentPage(1)
+    setIsLoading(true)
+  }
+
+  function handleSortOrderChange(event) {
+    const nextSortOrder = event.target.value
+
+    if (nextSortOrder === sortOrder) {
+      return
+    }
+
+    setSortOrder(nextSortOrder)
     setCurrentPage(1)
     setIsLoading(true)
   }
@@ -894,32 +910,48 @@ function App() {
             <div className="panel-heading">
               <div>
                 <h2 id="documents-title">Document library</h2>
-                <p>Browse your recently added files.</p>
+                <p>Browse and sort your documents.</p>
               </div>
-              <label className="search-box">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle
-                    cx="10.8"
-                    cy="10.8"
-                    r="6.8"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
+              <div className="panel-tools">
+                <label className="search-box">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle
+                      cx="10.8"
+                      cy="10.8"
+                      r="6.8"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                    />
+                    <path
+                      d="m16 16 4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <input
+                    type="search"
+                    placeholder="Search documents"
+                    value={query}
+                    onChange={handleSearchChange}
+                    aria-label="Search documents"
                   />
-                  <path
-                    d="m16 16 4 4"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <input
-                  type="search"
-                  placeholder="Search documents"
-                  value={query}
-                  onChange={handleSearchChange}
-                  aria-label="Search documents"
-                />
-              </label>
+                </label>
+                <label className="sort-control">
+                  <span className="visually-hidden">Sort documents</span>
+                  <select
+                    className="sort-select"
+                    value={sortOrder}
+                    onChange={handleSortOrderChange}
+                    disabled={isLoading}
+                  >
+                    <option value="date-desc">Newest first</option>
+                    <option value="date-asc">Oldest first</option>
+                    <option value="name-asc">Name A to Z</option>
+                    <option value="name-desc">Name Z to A</option>
+                  </select>
+                </label>
+              </div>
             </div>
 
             <div className="filter-tabs" role="group" aria-label="Filter documents">

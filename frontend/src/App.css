@@ -536,6 +536,12 @@ h2 {
   font-size: 11px;
 }
 
+.panel-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .search-box {
   display: flex;
   width: 220px;
@@ -546,6 +552,25 @@ h2 {
   border: 1px solid #e7e8ee;
   border-radius: 7px;
   color: #a0a4b2;
+}
+
+.sort-control {
+  display: flex;
+}
+
+.sort-select {
+  height: 35px;
+  padding: 0 9px;
+  border: 1px solid #e7e8ee;
+  border-radius: 7px;
+  background: #fff;
+  color: #555b70;
+  font: inherit;
+  font-size: 11px;
+}
+
+.sort-select:disabled {
+  cursor: wait;
 }
 
 .search-box svg {
@@ -993,9 +1018,17 @@ td:first-child {
     padding: 18px 16px 14px;
   }
 
+  .panel-tools {
+    width: 100%;
+  }
+
   .search-box {
     width: 100%;
     box-sizing: border-box;
+  }
+
+  .sort-select {
+    max-width: 135px;
   }
 
   .filter-tabs {
