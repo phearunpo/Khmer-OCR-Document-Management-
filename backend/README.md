@@ -29,6 +29,7 @@ Send the returned token as `Authorization: Bearer YOUR_TOKEN` on authenticated r
 | `GET` | `/api/documents/summary` | Return the signed-in user's document totals by type |
 | `GET` | `/api/documents` | List 10 documents per page by default; accepts `page`, `per_page` (1-100), `search`, `type=PDF\|Image`, `sort=name\|date`, and `direction=asc\|desc` (authentication required) |
 | `POST` | `/api/documents` | Upload a document as multipart form field `file` (authentication required) |
+| `PATCH` | `/api/documents/{id}` | Rename one of the signed-in user's documents |
 | `GET` | `/api/documents/{id}/download` | Download a private document owned by the signed-in user |
 | `DELETE` | `/api/documents/{id}` | Delete one of the signed-in user's documents and its stored file (authentication required) |
 

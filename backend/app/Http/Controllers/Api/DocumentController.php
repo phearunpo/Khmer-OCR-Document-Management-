@@ -97,6 +97,17 @@ class DocumentController extends Controller
             ->setStatusCode(201);
     }
 
+    public function update(Request $request, int $document): DocumentResource
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255', 'not_regex:/[\/\\\\]/'],
+        ]);
+        $document = $request->user()->documents()->findOrFail($document);
+        $document->update(['original_name' => $validated['name']]);
+
+        return new DocumentResource($document);
+    }
+
     public function download(Request $request, int $document): StreamedResponse
     {
         $document = $request->user()->documents()->findOrFail($document);

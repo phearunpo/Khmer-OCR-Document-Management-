@@ -26,5 +26,5 @@ Route::get('/documents/summary', [DocumentController::class, 'summary'])
     ->name('documents.summary');
 
 Route::apiResource('documents', DocumentController::class)
-    ->only(['index', 'store', 'destroy'])
+    ->only(['index', 'store', 'update', 'destroy'])
     ->middleware('auth:sanctum');

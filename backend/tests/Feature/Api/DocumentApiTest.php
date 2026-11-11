@@ -20,6 +20,7 @@ class DocumentApiTest extends TestCase
         $this->getJson('/api/documents/summary')->assertUnauthorized();
 
         $this->postJson('/api/documents')->assertUnauthorized();
+        $this->patchJson('/api/documents/1')->assertUnauthorized();
 
         $this->getJson('/api/documents/1/download')->assertUnauthorized();
 
@@ -255,6 +256,69 @@ class DocumentApiTest extends TestCase
 
         $this->assertDatabaseMissing('documents', ['id' => $document->id]);
         Storage::disk('local')->assertMissing($document->path);
+    }
+
+    public function test_user_can_rename_their_document_without_changing_its_storage_path(): void
+    {
+        $user = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'old-name.pdf',
+            'path' => 'documents/'.$user->id.'/stored-file.pdf',
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/documents/'.$document->id, [
+            'name' => 'new-name.pdf',
+        ])->assertOk()
+            ->assertJsonPath('data.name', 'new-name.pdf')
+            ->assertJsonMissingPath('data.path');
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'original_name' => 'new-name.pdf',
+            'path' => 'documents/'.$user->id.'/stored-file.pdf',
+        ]);
+    }
+
+    public function test_user_cannot_rename_another_users_document(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $owner->id,
+        ]);
+        Sanctum::actingAs($otherUser);
+
+        $this->patchJson('/api/documents/'.$document->id, [
+            'name' => 'renamed.pdf',
+        ])->assertNotFound();
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'original_name' => $document->original_name,
+        ]);
+    }
+
+    public function test_document_rename_rejects_empty_or_path_like_names(): void
+    {
+        $user = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $user->id,
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/documents/'.$document->id, ['name' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
+
+        $this->patchJson('/api/documents/'.$document->id, ['name' => '../private.pdf'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
+
+        $this->patchJson('/api/documents/'.$document->id, ['name' => 'C:\\private.pdf'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
     }
 
     public function test_user_cannot_delete_another_users_document(): void
