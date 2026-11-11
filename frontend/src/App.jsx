@@ -124,6 +124,10 @@ function App() {
   const [token, setToken] = useState(() => sessionStorage.getItem(tokenStorageKey))
   const [user, setUser] = useState(null)
   const [authMode, setAuthMode] = useState('login')
+  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false)
+  const [profileForm, setProfileForm] = useState({ name: '', email: '' })
+  const [profileError, setProfileError] = useState('')
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [documents, setDocuments] = useState([])
   const [documentSummary, setDocumentSummary] = useState(null)
   const [activeFilter, setActiveFilter] = useState(filters[0])
@@ -457,6 +461,43 @@ function App() {
   function toggleAuthMode() {
     setAuthMode((mode) => (mode === 'login' ? 'register' : 'login'))
     setAuthError('')
+  }
+
+  function openProfileEditor() {
+    setProfileForm({
+      name: user?.name ?? '',
+      email: user?.email ?? '',
+    })
+    setProfileError('')
+    setIsProfileEditorOpen(true)
+  }
+
+  async function handleProfileUpdate(event) {
+    event.preventDefault()
+    setIsUpdatingProfile(true)
+    setProfileError('')
+
+    try {
+      const response = await requestApi('/user', token, {
+        method: 'PUT',
+        body: JSON.stringify(profileForm),
+      })
+      setUser(response.data)
+      setIsProfileEditorOpen(false)
+      setSessionNotice({ message: 'Profile updated.', isError: false })
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setProfileError(error.message)
+      }
+    } finally {
+      setIsUpdatingProfile(false)
+    }
   }
 
   async function revokeOtherSessions() {
@@ -844,6 +885,14 @@ function App() {
           <span className="breadcrumb">Workspace <span>/</span> Documents</span>
           <div className="topbar-actions">
             <span className="language-chip">ភាសាខ្មែរ</span>
+            <button
+              className="logout-button"
+              type="button"
+              onClick={openProfileEditor}
+              disabled={!user}
+            >
+              Edit profile
+            </button>
             <button
               className="logout-button"
               type="button"
@@ -1288,6 +1337,72 @@ function App() {
                 alt={previewDocument.name}
               />
             )}
+          </section>
+        </div>
+      )}
+      {isProfileEditorOpen && (
+        <div
+          className="preview-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isUpdatingProfile) {
+              setIsProfileEditorOpen(false)
+            }
+          }}
+        >
+          <section
+            className="profile-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-title"
+          >
+            <header className="preview-header">
+              <h2 id="profile-title">Edit profile</h2>
+              <button
+                className="preview-close-button"
+                type="button"
+                disabled={isUpdatingProfile}
+                onClick={() => setIsProfileEditorOpen(false)}
+              >
+                Close
+              </button>
+            </header>
+            <form className="profile-form" onSubmit={handleProfileUpdate}>
+              <label className="auth-field">
+                Name
+                <input
+                  type="text"
+                  maxLength={255}
+                  required
+                  value={profileForm.name}
+                  onChange={(event) => setProfileForm({
+                    ...profileForm,
+                    name: event.target.value,
+                  })}
+                />
+              </label>
+              <label className="auth-field">
+                Email
+                <input
+                  type="email"
+                  maxLength={255}
+                  required
+                  value={profileForm.email}
+                  onChange={(event) => setProfileForm({
+                    ...profileForm,
+                    email: event.target.value,
+                  })}
+                />
+              </label>
+              {profileError && <p className="auth-error" role="alert">{profileError}</p>}
+              <button
+                className="upload-button auth-submit"
+                type="submit"
+                disabled={isUpdatingProfile}
+              >
+                {isUpdatingProfile ? 'Saving…' : 'Save profile'}
+              </button>
+            </form>
           </section>
         </div>
       )}

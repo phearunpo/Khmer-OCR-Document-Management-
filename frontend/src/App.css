@@ -870,6 +870,25 @@ td:first-child {
   box-shadow: 0 20px 60px rgb(0 0 0 / 25%);
 }
 
+.profile-dialog {
+  display: grid;
+  width: min(100%, 420px);
+  gap: 18px;
+  padding: 0 20px 20px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 25%);
+}
+
+.profile-form {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-form .auth-error {
+  margin: 0;
+}
+
 .preview-header {
   display: flex;
   min-height: 54px;
@@ -902,6 +921,11 @@ td:first-child {
 .preview-close-button:focus-visible {
   outline: 3px solid #c7c4ff;
   outline-offset: 2px;
+}
+
+.preview-close-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .preview-frame {
