@@ -21,6 +21,9 @@ Route::post('/logout/others', [AuthController::class, 'logoutOtherTokens'])
 Route::get('/documents/{document}/download', [DocumentController::class, 'download'])
     ->middleware('auth:sanctum')
     ->name('documents.download');
+Route::get('/documents/{document}/preview', [DocumentController::class, 'preview'])
+    ->middleware('auth:sanctum')
+    ->name('documents.preview');
 Route::get('/documents/summary', [DocumentController::class, 'summary'])
     ->middleware('auth:sanctum')
     ->name('documents.summary');

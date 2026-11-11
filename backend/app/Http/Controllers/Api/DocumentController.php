@@ -122,6 +122,21 @@ class DocumentController extends Controller
         );
     }
 
+    public function preview(Request $request, int $document): StreamedResponse
+    {
+        $document = $request->user()->documents()->findOrFail($document);
+
+        return Storage::disk($document->disk)->response(
+            $document->path,
+            $document->original_name,
+            [
+                'Content-Type' => $document->mime_type,
+                'X-Content-Type-Options' => 'nosniff',
+            ],
+            'inline',
+        );
+    }
+
     public function destroy(Request $request, int $document): JsonResponse
     {
         $document = $request->user()->documents()->findOrFail($document);
