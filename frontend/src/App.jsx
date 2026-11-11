@@ -148,6 +148,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(Boolean(token))
   const [isUploading, setIsUploading] = useState(false)
   const [isRevokingSessions, setIsRevokingSessions] = useState(false)
+  const [renamingDocumentId, setRenamingDocumentId] = useState(null)
   const [deletingDocumentId, setDeletingDocumentId] = useState(null)
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null)
 
@@ -580,6 +581,48 @@ function App() {
     }
   }
 
+  async function renameDocument(document) {
+    const enteredName = window.prompt('Enter a new document name:', document.name)
+
+    if (enteredName === null) {
+      return
+    }
+
+    const name = enteredName.trim()
+
+    if (!name) {
+      setDocumentError('Document name cannot be empty.')
+      return
+    }
+
+    if (name === document.name) {
+      return
+    }
+
+    setRenamingDocumentId(document.id)
+    setDocumentError('')
+
+    try {
+      await requestApi(`/documents/${document.id}`, token, {
+        method: 'PATCH',
+        body: JSON.stringify({ name }),
+      })
+      reloadDocuments()
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setDocumentError(`Could not rename ${document.name}: ${error.message}`)
+      }
+    } finally {
+      setRenamingDocumentId(null)
+    }
+  }
+
   async function downloadDocument(document) {
     setDownloadingDocumentId(document.id)
     setDocumentError('')
@@ -1005,6 +1048,15 @@ function App() {
                         <td>{formatFileSize(document.size)}</td>
                         <td><span className="status-pill">Stored</span></td>
                         <td>
+                          <button
+                            className="rename-document-button"
+                            type="button"
+                            disabled={renamingDocumentId !== null || isLoading}
+                            onClick={() => renameDocument(document)}
+                            aria-label={`Rename ${document.name}`}
+                          >
+                            {renamingDocumentId === document.id ? 'Renaming…' : 'Rename'}
+                          </button>
                           <button
                             className="download-document-button"
                             type="button"

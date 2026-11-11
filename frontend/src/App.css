@@ -777,6 +777,7 @@ td:first-child {
 }
 
 .download-document-button,
+.rename-document-button,
 .delete-document-button {
   padding: 6px 9px;
   border: 1px solid #e1e3ea;
@@ -786,6 +787,14 @@ td:first-child {
   font: inherit;
   font-size: 10px;
   font-weight: 600;
+}
+
+.rename-document-button {
+  color: #555b70;
+}
+
+.rename-document-button:hover:not(:disabled) {
+  background: #f5f6f9;
 }
 
 .download-document-button {
@@ -806,12 +815,14 @@ td:first-child {
 }
 
 .download-document-button:focus-visible,
+.rename-document-button:focus-visible,
 .delete-document-button:focus-visible {
   outline: 3px solid #f4c7c3;
   outline-offset: 2px;
 }
 
 .download-document-button:disabled,
+.rename-document-button:disabled,
 .delete-document-button:disabled {
   cursor: wait;
   opacity: 0.65;
