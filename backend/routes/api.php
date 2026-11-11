@@ -21,6 +21,9 @@ Route::post('/logout/others', [AuthController::class, 'logoutOtherTokens'])
 Route::get('/documents/{document}/download', [DocumentController::class, 'download'])
     ->middleware('auth:sanctum')
     ->name('documents.download');
+Route::get('/documents/summary', [DocumentController::class, 'summary'])
+    ->middleware('auth:sanctum')
+    ->name('documents.summary');
 
 Route::apiResource('documents', DocumentController::class)
     ->only(['index', 'store', 'destroy'])

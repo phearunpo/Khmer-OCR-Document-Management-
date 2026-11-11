@@ -15,6 +15,25 @@ use Throwable;
 
 class DocumentController extends Controller
 {
+    public function summary(Request $request): JsonResponse
+    {
+        $counts = $request->user()->documents()
+            ->selectRaw('mime_type, COUNT(*) AS aggregate')
+            ->groupBy('mime_type')
+            ->pluck('aggregate', 'mime_type');
+        $pdfCount = (int) ($counts['application/pdf'] ?? 0);
+        $imageCount = (int) ($counts['image/png'] ?? 0)
+            + (int) ($counts['image/jpeg'] ?? 0);
+
+        return response()->json([
+            'data' => [
+                'total' => $counts->sum(),
+                'pdf' => $pdfCount,
+                'image' => $imageCount,
+            ],
+        ]);
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $filters = $request->validate([

@@ -17,12 +17,61 @@ class DocumentApiTest extends TestCase
     public function test_document_endpoints_require_authentication(): void
     {
         $this->getJson('/api/documents')->assertUnauthorized();
+        $this->getJson('/api/documents/summary')->assertUnauthorized();
 
         $this->postJson('/api/documents')->assertUnauthorized();
 
         $this->getJson('/api/documents/1/download')->assertUnauthorized();
 
         $this->deleteJson('/api/documents/1')->assertUnauthorized();
+    }
+
+    public function test_document_summary_counts_only_the_authenticated_users_files(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'mime_type' => 'application/pdf',
+        ]);
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'mime_type' => 'image/png',
+        ]);
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'mime_type' => 'image/jpeg',
+        ]);
+        Document::factory()->count(2)->create([
+            'user_id' => $otherUser->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/documents/summary')
+            ->assertOk()
+            ->assertExactJson([
+                'data' => [
+                    'total' => 3,
+                    'pdf' => 1,
+                    'image' => 2,
+                ],
+            ]);
+    }
+
+    public function test_empty_document_summary_returns_zero_counts(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/documents/summary')
+            ->assertOk()
+            ->assertExactJson([
+                'data' => [
+                    'total' => 0,
+                    'pdf' => 0,
+                    'image' => 0,
+                ],
+            ]);
     }
 
     public function test_authenticated_user_can_upload_a_pdf(): void
