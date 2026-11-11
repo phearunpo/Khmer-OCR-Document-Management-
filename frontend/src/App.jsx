@@ -148,9 +148,30 @@ function App() {
   const [isLoading, setIsLoading] = useState(Boolean(token))
   const [isUploading, setIsUploading] = useState(false)
   const [isRevokingSessions, setIsRevokingSessions] = useState(false)
+  const [previewDocument, setPreviewDocument] = useState(null)
+  const [previewingDocumentId, setPreviewingDocumentId] = useState(null)
   const [renamingDocumentId, setRenamingDocumentId] = useState(null)
   const [deletingDocumentId, setDeletingDocumentId] = useState(null)
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null)
+
+  useEffect(() => {
+    if (!previewDocument) {
+      return undefined
+    }
+
+    function handlePreviewKeyDown(event) {
+      if (event.key === 'Escape') {
+        setPreviewDocument(null)
+      }
+    }
+
+    window.addEventListener('keydown', handlePreviewKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', handlePreviewKeyDown)
+      URL.revokeObjectURL(previewDocument.url)
+    }
+  }, [previewDocument])
 
   useEffect(() => {
     if (!token) {
@@ -650,6 +671,33 @@ function App() {
     }
   }
 
+  async function previewDocumentFile(document) {
+    setPreviewingDocumentId(document.id)
+    setDocumentError('')
+
+    try {
+      const file = await downloadApi(`/documents/${document.id}/preview`, token)
+      setPreviewDocument({
+        id: document.id,
+        name: document.name,
+        type: document.type,
+        url: URL.createObjectURL(file),
+      })
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setDocumentError(`Could not preview ${document.name}: ${error.message}`)
+      }
+    } finally {
+      setPreviewingDocumentId(null)
+    }
+  }
+
   if (!token) {
     return (
       <main className="auth-page">
@@ -1049,6 +1097,15 @@ function App() {
                         <td><span className="status-pill">Stored</span></td>
                         <td>
                           <button
+                            className="preview-document-button"
+                            type="button"
+                            disabled={previewingDocumentId !== null}
+                            onClick={() => previewDocumentFile(document)}
+                            aria-label={`Preview ${document.name}`}
+                          >
+                            {previewingDocumentId === document.id ? 'Opening…' : 'Preview'}
+                          </button>
+                          <button
                             className="rename-document-button"
                             type="button"
                             disabled={renamingDocumentId !== null || isLoading}
@@ -1191,6 +1248,49 @@ function App() {
           </p>
         </section>
       </main>
+      {previewDocument && (
+        <div
+          className="preview-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setPreviewDocument(null)
+            }
+          }}
+        >
+          <section
+            className="preview-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="preview-title"
+          >
+            <header className="preview-header">
+              <h2 id="preview-title">{previewDocument.name}</h2>
+              <button
+                className="preview-close-button"
+                type="button"
+                onClick={() => setPreviewDocument(null)}
+                aria-label="Close preview"
+              >
+                Close
+              </button>
+            </header>
+            {previewDocument.type === 'PDF' ? (
+              <iframe
+                className="preview-frame"
+                src={previewDocument.url}
+                title={`Preview of ${previewDocument.name}`}
+              />
+            ) : (
+              <img
+                className="preview-image"
+                src={previewDocument.url}
+                alt={previewDocument.name}
+              />
+            )}
+          </section>
+        </div>
+      )}
     </div>
   )
 }

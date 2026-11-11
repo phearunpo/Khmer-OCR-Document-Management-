@@ -777,6 +777,7 @@ td:first-child {
 }
 
 .download-document-button,
+.preview-document-button,
 .rename-document-button,
 .delete-document-button {
   padding: 6px 9px;
@@ -787,6 +788,14 @@ td:first-child {
   font: inherit;
   font-size: 10px;
   font-weight: 600;
+}
+
+.preview-document-button {
+  color: #26734b;
+}
+
+.preview-document-button:hover:not(:disabled) {
+  background: #f0faf4;
 }
 
 .rename-document-button {
@@ -815,6 +824,7 @@ td:first-child {
 }
 
 .download-document-button:focus-visible,
+.preview-document-button:focus-visible,
 .rename-document-button:focus-visible,
 .delete-document-button:focus-visible {
   outline: 3px solid #f4c7c3;
@@ -822,6 +832,7 @@ td:first-child {
 }
 
 .download-document-button:disabled,
+.preview-document-button:disabled,
 .rename-document-button:disabled,
 .delete-document-button:disabled {
   cursor: wait;
@@ -836,6 +847,75 @@ td:first-child {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   clip-path: inset(50%);
+}
+
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(20 24 40 / 60%);
+}
+
+.preview-dialog {
+  display: flex;
+  width: min(100%, 1000px);
+  height: min(90vh, 760px);
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 25%);
+}
+
+.preview-header {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e8e9ed;
+}
+
+.preview-header h2 {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-close-button {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid #e1e3ea;
+  border-radius: 6px;
+  background: #fff;
+  color: #555b70;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+
+.preview-close-button:focus-visible {
+  outline: 3px solid #c7c4ff;
+  outline-offset: 2px;
+}
+
+.preview-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .empty-state {
@@ -986,6 +1066,14 @@ td:first-child {
 }
 
 @media (max-width: 540px) {
+  .preview-overlay {
+    padding: 8px;
+  }
+
+  .preview-dialog {
+    height: 94vh;
+  }
+
   .language-chip {
     display: none;
   }
