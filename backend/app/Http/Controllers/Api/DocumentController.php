@@ -68,6 +68,13 @@ class DocumentController extends Controller
         return DocumentResource::collection($documents);
     }
 
+    public function show(Request $request, int $document): DocumentResource
+    {
+        $document = $request->user()->documents()->findOrFail($document);
+
+        return new DocumentResource($document);
+    }
+
     public function store(StoreDocumentRequest $request): JsonResponse
     {
         $file = $request->file('file');

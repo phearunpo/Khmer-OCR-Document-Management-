@@ -17,6 +17,7 @@ class DocumentApiTest extends TestCase
     public function test_document_endpoints_require_authentication(): void
     {
         $this->getJson('/api/documents')->assertUnauthorized();
+        $this->getJson('/api/documents/1')->assertUnauthorized();
         $this->getJson('/api/documents/summary')->assertUnauthorized();
 
         $this->postJson('/api/documents')->assertUnauthorized();
@@ -136,6 +137,45 @@ class DocumentApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'owner.pdf');
+    }
+
+    public function test_user_can_view_their_document_details(): void
+    {
+        $user = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'report.pdf',
+            'mime_type' => 'application/pdf',
+            'file_size' => 2048,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/documents/'.$document->id)
+            ->assertOk()
+            ->assertJson([
+                'data' => [
+                    'id' => $document->id,
+                    'name' => 'report.pdf',
+                    'type' => 'PDF',
+                    'mime_type' => 'application/pdf',
+                    'size' => 2048,
+                ],
+            ]);
+    }
+
+    public function test_user_cannot_view_another_users_document_details(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $owner->id,
+        ]);
+
+        Sanctum::actingAs($otherUser);
+
+        $this->getJson('/api/documents/'.$document->id)
+            ->assertNotFound();
     }
 
     public function test_document_list_is_paginated_and_keeps_user_scope(): void
