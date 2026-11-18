@@ -999,6 +999,50 @@ td:first-child {
   color: #34394d;
 }
 
+.notes-field {
+  display: grid;
+  gap: 7px;
+  padding: 0 20px;
+  color: #858a9b;
+  font-size: 12px;
+}
+
+.notes-field textarea {
+  width: 100%;
+  min-height: 110px;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid #e1e3ea;
+  border-radius: 7px;
+  color: #34394d;
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.notes-field textarea:focus-visible {
+  outline: 3px solid #c7c4ff;
+  outline-offset: 2px;
+}
+
+.notes-field textarea:disabled {
+  background: #f8f8fb;
+}
+
+.notes-error {
+  margin: 0 20px;
+}
+
+.notes-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px 20px;
+  color: #858a9b;
+  font-size: 11px;
+}
+
 .details-error {
   position: fixed;
   right: 24px;

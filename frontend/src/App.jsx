@@ -166,6 +166,9 @@ function App() {
   const [documentDetails, setDocumentDetails] = useState(null)
   const [detailsError, setDetailsError] = useState('')
   const [loadingDetailsId, setLoadingDetailsId] = useState(null)
+  const [notesDraft, setNotesDraft] = useState('')
+  const [notesError, setNotesError] = useState('')
+  const [isSavingNotes, setIsSavingNotes] = useState(false)
   const [favoritingDocumentId, setFavoritingDocumentId] = useState(null)
   const [archivingDocumentId, setArchivingDocumentId] = useState(null)
   const [renamingDocumentId, setRenamingDocumentId] = useState(null)
@@ -940,11 +943,18 @@ function App() {
   async function viewDocumentDetails(document) {
     setLoadingDetailsId(document.id)
     setDetailsError('')
+    setNotesError('')
     setDocumentDetails(null)
+    setNotesDraft('')
 
     try {
-      const response = await requestApi(`/documents/${document.id}`, token)
-      setDocumentDetails(response.data)
+      const [detailsResponse, notesResponse] = await Promise.all([
+        requestApi(`/documents/${document.id}`, token),
+        requestApi(`/documents/${document.id}/notes`, token),
+      ])
+      const notes = notesResponse.data.notes ?? ''
+      setDocumentDetails({ ...detailsResponse.data, notes })
+      setNotesDraft(notes)
     } catch (error) {
       if (error.status === 401) {
         sessionStorage.removeItem(tokenStorageKey)
@@ -957,6 +967,44 @@ function App() {
       }
     } finally {
       setLoadingDetailsId(null)
+    }
+  }
+
+  async function saveDocumentNotes() {
+    if (
+      !documentDetails ||
+      notesDraft === (documentDetails.notes ?? '')
+    ) {
+      return
+    }
+
+    setIsSavingNotes(true)
+    setNotesError('')
+
+    try {
+      const response = await requestApi(`/documents/${documentDetails.id}/notes`, token, {
+        method: 'PATCH',
+        body: JSON.stringify({ notes: notesDraft || null }),
+      })
+      setDocumentDetails((currentDetails) => (
+        currentDetails
+          ? { ...currentDetails, notes: response.data.notes }
+          : currentDetails
+      ))
+      setNotesDraft(response.data.notes ?? '')
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setDocumentDetails(null)
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setNotesError(`Could not save notes: ${error.message}`)
+      }
+    } finally {
+      setIsSavingNotes(false)
     }
   }
 
@@ -1496,9 +1544,9 @@ function App() {
                             type="button"
                             disabled={loadingDetailsId !== null}
                             onClick={() => viewDocumentDetails(document)}
-                            aria-label={`View details for ${document.name}`}
+                            aria-label={`View details and edit notes for ${document.name}`}
                           >
-                            {loadingDetailsId === document.id ? 'Loading…' : 'Details'}
+                            {loadingDetailsId === document.id ? 'Loading…' : 'Details / Notes'}
                           </button>
                           <button
                             className="preview-document-button"
@@ -1697,6 +1745,32 @@ function App() {
                 })}
               </dd>
             </dl>
+            <label className="notes-field">
+              <span>Notes</span>
+              <textarea
+                value={notesDraft}
+                onChange={(event) => setNotesDraft(event.target.value)}
+                maxLength={10000}
+                rows={5}
+                disabled={isSavingNotes}
+                placeholder="Add context or reminders for this document."
+              />
+            </label>
+            {notesError && <p className="auth-error notes-error" role="alert">{notesError}</p>}
+            <div className="notes-footer">
+              <span>{notesDraft.length}/10000 characters</span>
+              <button
+                className="page-button"
+                type="button"
+                disabled={
+                  isSavingNotes ||
+                  notesDraft === (documentDetails.notes ?? '')
+                }
+                onClick={saveDocumentNotes}
+              >
+                {isSavingNotes ? 'Saving…' : 'Save notes'}
+              </button>
+            </div>
           </section>
         </div>
       )}
