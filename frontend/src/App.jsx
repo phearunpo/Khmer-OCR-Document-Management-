@@ -169,6 +169,8 @@ function App() {
   const [archivingDocumentId, setArchivingDocumentId] = useState(null)
   const [renamingDocumentId, setRenamingDocumentId] = useState(null)
   const [deletingDocumentId, setDeletingDocumentId] = useState(null)
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState([])
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null)
 
   useEffect(() => {
@@ -318,6 +320,7 @@ function App() {
           return
         }
 
+        setSelectedDocumentIds([])
         setDocuments(response.data.map((document) => ({
           ...document,
           addedAt: new Date(document.created_at),
@@ -344,6 +347,7 @@ function App() {
           setAuthError('Your session expired. Please sign in again.')
         } else {
           setDocumentError(error.message)
+          setSelectedDocumentIds([])
           setDocuments([])
           setPagination({
             current_page: currentPage,
@@ -368,6 +372,21 @@ function App() {
     setIsLoading(true)
     setDocumentError('')
     setRefreshKey((key) => key + 1)
+  }
+
+  function toggleDocumentSelection(documentId) {
+    setSelectedDocumentIds((selectedIds) => (
+      selectedIds.includes(documentId)
+        ? selectedIds.filter((id) => id !== documentId)
+        : [...selectedIds, documentId]
+    ))
+  }
+
+  function toggleSelectCurrentPage() {
+    const currentPageIds = documents.map((document) => document.id)
+    const allSelected = currentPageIds.every((id) => selectedDocumentIds.includes(id))
+
+    setSelectedDocumentIds(allSelected ? [] : currentPageIds)
   }
 
   function handleSearchChange(event) {
@@ -737,6 +756,41 @@ function App() {
       }
     } finally {
       setDeletingDocumentId(null)
+    }
+  }
+
+  async function deleteSelectedDocuments() {
+    const selectedCount = selectedDocumentIds.length
+
+    if (
+      selectedCount === 0 ||
+      !window.confirm(`Delete ${selectedCount} selected documents? This cannot be undone.`)
+    ) {
+      return
+    }
+
+    setIsBulkDeleting(true)
+    setDocumentError('')
+
+    try {
+      await requestApi('/documents/bulk', token, {
+        method: 'DELETE',
+        body: JSON.stringify({ ids: selectedDocumentIds }),
+      })
+      setSelectedDocumentIds([])
+      reloadDocuments()
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setDocumentError(`Could not delete the selected documents: ${error.message}`)
+      }
+    } finally {
+      setIsBulkDeleting(false)
     }
   }
 
@@ -1285,6 +1339,19 @@ function App() {
                 </button>
               ))}
             </div>
+            {selectedDocumentIds.length > 0 && (
+              <div className="bulk-actions">
+                <span>{selectedDocumentIds.length} selected</span>
+                <button
+                  className="delete-document-button"
+                  type="button"
+                  disabled={isBulkDeleting || isLoading}
+                  onClick={deleteSelectedDocuments}
+                >
+                  {isBulkDeleting ? 'Deleting…' : 'Delete selected'}
+                </button>
+              </div>
+            )}
 
             {isLoading ? (
               <div className="empty-state" role="status">Loading documents…</div>
@@ -1293,6 +1360,19 @@ function App() {
                 <table>
                   <thead>
                     <tr>
+                      <th scope="col" className="selection-cell">
+                        <input
+                          className="selection-checkbox"
+                          type="checkbox"
+                          checked={
+                            documents.length > 0 &&
+                            documents.every((document) => selectedDocumentIds.includes(document.id))
+                          }
+                          onChange={toggleSelectCurrentPage}
+                          disabled={isLoading || isBulkDeleting}
+                          aria-label="Select all documents on this page"
+                        />
+                      </th>
                       <th scope="col">Name</th>
                       <th scope="col">Type</th>
                       <th scope="col">Date added</th>
@@ -1304,6 +1384,16 @@ function App() {
                   <tbody>
                     {documents.map((document) => (
                       <tr key={document.id}>
+                        <td className="selection-cell">
+                          <input
+                            className="selection-checkbox"
+                            type="checkbox"
+                            checked={selectedDocumentIds.includes(document.id)}
+                            onChange={() => toggleDocumentSelection(document.id)}
+                            disabled={isLoading || isBulkDeleting}
+                            aria-label={`Select ${document.name}`}
+                          />
+                        </td>
                         <td>
                           <span className={`file-badge ${document.type === 'PDF' ? 'pdf-badge' : 'image-badge'}`}>
                             {document.type === 'PDF' ? 'PDF' : 'IMG'}
@@ -1385,7 +1475,12 @@ function App() {
                           <button
                             className="delete-document-button"
                             type="button"
-                            disabled={deletingDocumentId === document.id}
+                            disabled={
+                              isLoading ||
+                              deletingDocumentId === document.id ||
+                              deletingDocumentId !== null ||
+                              isBulkDeleting
+                            }
                             onClick={() => deleteDocument(document)}
                             aria-label={`Delete ${document.name}`}
                           >

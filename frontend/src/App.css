@@ -695,6 +695,18 @@ h2 {
   color: #a0a4b2;
 }
 
+.bulk-actions {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0 22px;
+  color: #74798a;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .table-scroll {
   overflow-x: auto;
 }
@@ -722,6 +734,24 @@ td {
 th:first-child,
 td:first-child {
   padding-left: 22px;
+}
+
+th.selection-cell,
+td.selection-cell {
+  width: 40px;
+  padding: 0 8px 0 14px;
+}
+
+.selection-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #5146e5;
+  cursor: pointer;
+}
+
+.selection-checkbox:focus-visible {
+  outline: 3px solid #c7c4ff;
+  outline-offset: 2px;
 }
 
 td {
