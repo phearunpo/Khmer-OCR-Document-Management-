@@ -44,6 +44,7 @@ class DocumentController extends Controller
             'sort' => ['sometimes', 'in:name,date'],
             'direction' => ['sometimes', 'in:asc,desc'],
             'favorites' => ['sometimes', 'boolean'],
+            'archived' => ['sometimes', 'boolean'],
         ]);
         $sortColumn = ($filters['sort'] ?? 'date') === 'name'
             ? 'original_name'
@@ -64,6 +65,11 @@ class DocumentController extends Controller
             ->when(
                 filter_var($filters['favorites'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 fn ($query) => $query->where('is_favorite', true),
+            )
+            ->when(
+                filter_var($filters['archived'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                fn ($query) => $query->whereNotNull('archived_at'),
+                fn ($query) => $query->whereNull('archived_at'),
             )
             ->orderBy($sortColumn, $sortDirection)
             ->orderByDesc('id')
@@ -127,6 +133,19 @@ class DocumentController extends Controller
         ]);
         $document = $request->user()->documents()->findOrFail($document);
         $document->update(['is_favorite' => $validated['is_favorite']]);
+
+        return new DocumentResource($document);
+    }
+
+    public function updateArchive(Request $request, int $document): DocumentResource
+    {
+        $validated = $request->validate([
+            'archived' => ['required', 'boolean'],
+        ]);
+        $document = $request->user()->documents()->findOrFail($document);
+        $document->update([
+            'archived_at' => $validated['archived'] ? now() : null,
+        ]);
 
         return new DocumentResource($document);
     }

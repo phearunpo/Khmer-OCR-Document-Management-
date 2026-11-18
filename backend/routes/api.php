@@ -34,6 +34,9 @@ Route::get('/documents/summary', [DocumentController::class, 'summary'])
 Route::patch('/documents/{document}/favorite', [DocumentController::class, 'updateFavorite'])
     ->middleware('auth:sanctum')
     ->name('documents.favorite');
+Route::patch('/documents/{document}/archive', [DocumentController::class, 'updateArchive'])
+    ->middleware('auth:sanctum')
+    ->name('documents.archive');
 
 Route::apiResource('documents', DocumentController::class)
     ->only(['index', 'show', 'store', 'update', 'destroy'])

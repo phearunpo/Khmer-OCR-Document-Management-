@@ -21,6 +21,7 @@ class DocumentResource extends JsonResource
             'mime_type' => $this->mime_type,
             'size' => $this->file_size,
             'is_favorite' => (bool) $this->is_favorite,
+            'is_archived' => $this->archived_at !== null,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

@@ -23,6 +23,7 @@ class DocumentApiTest extends TestCase
         $this->postJson('/api/documents')->assertUnauthorized();
         $this->patchJson('/api/documents/1')->assertUnauthorized();
         $this->patchJson('/api/documents/1/favorite')->assertUnauthorized();
+        $this->patchJson('/api/documents/1/archive')->assertUnauthorized();
 
         $this->getJson('/api/documents/1/download')->assertUnauthorized();
         $this->getJson('/api/documents/1/preview')->assertUnauthorized();
@@ -283,6 +284,53 @@ class DocumentApiTest extends TestCase
         $this->assertDatabaseHas('documents', [
             'id' => $document->id,
             'is_favorite' => false,
+        ]);
+    }
+
+    public function test_user_can_archive_and_restore_their_document(): void
+    {
+        $user = User::factory()->create();
+        $document = Document::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/documents/'.$document->id.'/archive', [
+            'archived' => true,
+        ])->assertOk()
+            ->assertJsonPath('data.is_archived', true);
+
+        $this->getJson('/api/documents')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->getJson('/api/documents?archived=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.is_archived', true);
+
+        $this->patchJson('/api/documents/'.$document->id.'/archive', [
+            'archived' => false,
+        ])->assertOk()
+            ->assertJsonPath('data.is_archived', false);
+
+        $this->getJson('/api/documents')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
+    public function test_user_cannot_archive_another_users_document(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $document = Document::factory()->create(['user_id' => $owner->id]);
+        Sanctum::actingAs($otherUser);
+
+        $this->patchJson('/api/documents/'.$document->id.'/archive', [
+            'archived' => true,
+        ])->assertNotFound();
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'archived_at' => null,
         ]);
     }
 
