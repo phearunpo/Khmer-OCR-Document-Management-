@@ -217,6 +217,32 @@ class DocumentController extends Controller
         return new DocumentResource($document);
     }
 
+    public function showNotes(Request $request, int $document): JsonResponse
+    {
+        $document = $request->user()->documents()->findOrFail($document);
+
+        return response()->json([
+            'data' => [
+                'notes' => $document->notes,
+            ],
+        ]);
+    }
+
+    public function updateNotes(Request $request, int $document): JsonResponse
+    {
+        $validated = $request->validate([
+            'notes' => ['present', 'nullable', 'string', 'max:10000'],
+        ]);
+        $document = $request->user()->documents()->findOrFail($document);
+        $document->update(['notes' => $validated['notes']]);
+
+        return response()->json([
+            'data' => [
+                'notes' => $document->notes,
+            ],
+        ]);
+    }
+
     public function download(Request $request, int $document): StreamedResponse
     {
         $document = $request->user()->documents()->findOrFail($document);

@@ -26,6 +26,8 @@ class DocumentApiTest extends TestCase
         $this->patchJson('/api/documents/1')->assertUnauthorized();
         $this->patchJson('/api/documents/1/favorite')->assertUnauthorized();
         $this->patchJson('/api/documents/1/archive')->assertUnauthorized();
+        $this->getJson('/api/documents/1/notes')->assertUnauthorized();
+        $this->patchJson('/api/documents/1/notes')->assertUnauthorized();
 
         $this->getJson('/api/documents/1/download')->assertUnauthorized();
         $this->getJson('/api/documents/1/preview')->assertUnauthorized();
@@ -334,6 +336,70 @@ class DocumentApiTest extends TestCase
             'id' => $document->id,
             'archived_at' => null,
         ]);
+    }
+
+    public function test_user_can_read_update_and_clear_their_document_notes(): void
+    {
+        $user = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $user->id,
+            'notes' => 'Initial note',
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/documents/'.$document->id.'/notes')
+            ->assertOk()
+            ->assertExactJson(['data' => ['notes' => 'Initial note']]);
+
+        $this->patchJson('/api/documents/'.$document->id.'/notes', [
+            'notes' => 'Review the handwritten text.',
+        ])->assertOk()
+            ->assertExactJson(['data' => ['notes' => 'Review the handwritten text.']]);
+
+        $this->patchJson('/api/documents/'.$document->id.'/notes', [
+            'notes' => null,
+        ])->assertOk()
+            ->assertExactJson(['data' => ['notes' => null]]);
+    }
+
+    public function test_user_cannot_read_or_update_another_users_document_notes(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $owner->id,
+            'notes' => 'Private note',
+        ]);
+        Sanctum::actingAs($otherUser);
+
+        $this->getJson('/api/documents/'.$document->id.'/notes')
+            ->assertNotFound();
+
+        $this->patchJson('/api/documents/'.$document->id.'/notes', [
+            'notes' => 'Attempted change',
+        ])->assertNotFound();
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'notes' => 'Private note',
+        ]);
+    }
+
+    public function test_document_notes_reject_non_text_and_overlong_values(): void
+    {
+        $user = User::factory()->create();
+        $document = Document::factory()->create(['user_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/documents/'.$document->id.'/notes', [
+            'notes' => ['not', 'text'],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('notes');
+
+        $this->patchJson('/api/documents/'.$document->id.'/notes', [
+            'notes' => str_repeat('a', 10001),
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('notes');
     }
 
     public function test_document_list_can_be_filtered_by_type_and_name(): void

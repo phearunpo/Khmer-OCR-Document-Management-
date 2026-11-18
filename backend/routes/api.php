@@ -43,6 +43,12 @@ Route::delete('/documents/bulk', [DocumentController::class, 'destroyMany'])
 Route::get('/documents/export', [DocumentController::class, 'export'])
     ->middleware('auth:sanctum')
     ->name('documents.export');
+Route::get('/documents/{document}/notes', [DocumentController::class, 'showNotes'])
+    ->middleware('auth:sanctum')
+    ->name('documents.notes.show');
+Route::patch('/documents/{document}/notes', [DocumentController::class, 'updateNotes'])
+    ->middleware('auth:sanctum')
+    ->name('documents.notes.update');
 
 Route::apiResource('documents', DocumentController::class)
     ->only(['index', 'show', 'store', 'update', 'destroy'])

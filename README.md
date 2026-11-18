@@ -65,6 +65,8 @@ Register in the frontend or sign in with an existing user account. For direct AP
 | `GET` | `/api/documents` | List 10 documents per page by default; accepts `page`, `per_page` (1-100), `search`, `type=PDF\|Image`, `sort=name\|date`, and `direction=asc\|desc` (authentication required) |
 | `GET` | `/api/documents/export` | Download all matching documents as CSV using the library's search, type, favorite, archive, and sort filters |
 | `GET` | `/api/documents/{id}` | Return metadata for one document owned by the authenticated user |
+| `GET` | `/api/documents/{id}/notes` | Read notes for an owned document |
+| `PATCH` | `/api/documents/{id}/notes` | Replace or clear notes for an owned document (up to 10,000 characters) |
 | `PATCH` | `/api/documents/{id}/favorite` | Mark or unmark a document as a favorite |
 | `PATCH` | `/api/documents/{id}/archive` | Archive or restore a document |
 | `POST` | `/api/documents` | Upload one document using multipart form field `file` (authentication required) |
