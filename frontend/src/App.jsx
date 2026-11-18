@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { validateDocumentFiles } from './documentFiles.js'
 import './App.css'
 
-const filters = ['All documents', 'PDFs', 'Images', 'Favorites']
+const filters = ['All documents', 'PDFs', 'Images', 'Favorites', 'Archived']
 const apiBaseUrl = (
   import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000/api'
 ).replace(/\/$/, '')
@@ -166,6 +166,7 @@ function App() {
   const [detailsError, setDetailsError] = useState('')
   const [loadingDetailsId, setLoadingDetailsId] = useState(null)
   const [favoritingDocumentId, setFavoritingDocumentId] = useState(null)
+  const [archivingDocumentId, setArchivingDocumentId] = useState(null)
   const [renamingDocumentId, setRenamingDocumentId] = useState(null)
   const [deletingDocumentId, setDeletingDocumentId] = useState(null)
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null)
@@ -302,6 +303,8 @@ function App() {
       params.set('type', 'Image')
     } else if (activeFilter === 'Favorites') {
       params.set('favorites', '1')
+    } else if (activeFilter === 'Archived') {
+      params.set('archived', '1')
     }
 
     requestApi(`/documents?${params}`, token)
@@ -881,6 +884,31 @@ function App() {
     }
   }
 
+  async function toggleDocumentArchive(document) {
+    setArchivingDocumentId(document.id)
+    setDocumentError('')
+
+    try {
+      await requestApi(`/documents/${document.id}/archive`, token, {
+        method: 'PATCH',
+        body: JSON.stringify({ archived: !document.is_archived }),
+      })
+      reloadDocuments()
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setDocumentError(`Could not update archive status for ${document.name}: ${error.message}`)
+      }
+    } finally {
+      setArchivingDocumentId(null)
+    }
+  }
+
   if (!token) {
     return (
       <main className="auth-page">
@@ -1306,6 +1334,17 @@ function App() {
                             {favoritingDocumentId === document.id
                               ? 'Saving…'
                               : document.is_favorite ? '★ Saved' : '☆ Favorite'}
+                          </button>
+                          <button
+                            className="archive-document-button"
+                            type="button"
+                            disabled={archivingDocumentId !== null || isLoading}
+                            onClick={() => toggleDocumentArchive(document)}
+                            aria-label={`${document.is_archived ? 'Restore' : 'Archive'} ${document.name}`}
+                          >
+                            {archivingDocumentId === document.id
+                              ? 'Saving…'
+                              : document.is_archived ? 'Restore' : 'Archive'}
                           </button>
                           <button
                             className="details-document-button"

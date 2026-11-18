@@ -777,6 +777,7 @@ td:first-child {
 }
 
 .download-document-button,
+.archive-document-button,
 .favorite-document-button,
 .details-document-button,
 .preview-document-button,
@@ -790,6 +791,14 @@ td:first-child {
   font: inherit;
   font-size: 10px;
   font-weight: 600;
+}
+
+.archive-document-button {
+  color: #555b70;
+}
+
+.archive-document-button:hover:not(:disabled) {
+  background: #f5f6f9;
 }
 
 .favorite-document-button {
@@ -842,6 +851,7 @@ td:first-child {
 }
 
 .download-document-button:focus-visible,
+.archive-document-button:focus-visible,
 .favorite-document-button:focus-visible,
 .details-document-button:focus-visible,
 .preview-document-button:focus-visible,
@@ -852,6 +862,7 @@ td:first-child {
 }
 
 .download-document-button:disabled,
+.archive-document-button:disabled,
 .favorite-document-button:disabled,
 .details-document-button:disabled,
 .preview-document-button:disabled,
