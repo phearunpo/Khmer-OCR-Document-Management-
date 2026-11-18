@@ -162,6 +162,9 @@ function App() {
   const [isRevokingSessions, setIsRevokingSessions] = useState(false)
   const [previewDocument, setPreviewDocument] = useState(null)
   const [previewingDocumentId, setPreviewingDocumentId] = useState(null)
+  const [documentDetails, setDocumentDetails] = useState(null)
+  const [detailsError, setDetailsError] = useState('')
+  const [loadingDetailsId, setLoadingDetailsId] = useState(null)
   const [renamingDocumentId, setRenamingDocumentId] = useState(null)
   const [deletingDocumentId, setDeletingDocumentId] = useState(null)
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null)
@@ -827,6 +830,29 @@ function App() {
     }
   }
 
+  async function viewDocumentDetails(document) {
+    setLoadingDetailsId(document.id)
+    setDetailsError('')
+    setDocumentDetails(null)
+
+    try {
+      const response = await requestApi(`/documents/${document.id}`, token)
+      setDocumentDetails(response.data)
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setDetailsError(`Could not load ${document.name}: ${error.message}`)
+      }
+    } finally {
+      setLoadingDetailsId(null)
+    }
+  }
+
   if (!token) {
     return (
       <main className="auth-page">
@@ -1242,6 +1268,15 @@ function App() {
                         <td><span className="status-pill">Stored</span></td>
                         <td>
                           <button
+                            className="details-document-button"
+                            type="button"
+                            disabled={loadingDetailsId !== null}
+                            onClick={() => viewDocumentDetails(document)}
+                            aria-label={`View details for ${document.name}`}
+                          >
+                            {loadingDetailsId === document.id ? 'Loading…' : 'Details'}
+                          </button>
+                          <button
                             className="preview-document-button"
                             type="button"
                             disabled={previewingDocumentId !== null}
@@ -1393,6 +1428,49 @@ function App() {
           </p>
         </section>
       </main>
+      {detailsError && <p className="upload-error details-error" role="alert">{detailsError}</p>}
+      {documentDetails && (
+        <div
+          className="preview-overlay"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setDocumentDetails(null)
+            }
+          }}
+        >
+          <section
+            className="profile-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="details-title"
+          >
+            <header className="preview-header">
+              <h2 id="details-title">{documentDetails.name}</h2>
+              <button
+                className="preview-close-button"
+                type="button"
+                onClick={() => setDocumentDetails(null)}
+              >
+                Close
+              </button>
+            </header>
+            <dl className="document-details">
+              <dt>Type</dt>
+              <dd>{documentDetails.mime_type}</dd>
+              <dt>Size</dt>
+              <dd>{formatFileSize(documentDetails.size)}</dd>
+              <dt>Added</dt>
+              <dd>
+                {new Date(documentDetails.created_at).toLocaleString(undefined, {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })}
+              </dd>
+            </dl>
+          </section>
+        </div>
+      )}
       {previewDocument && (
         <div
           className="preview-overlay"
