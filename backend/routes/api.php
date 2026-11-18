@@ -40,6 +40,9 @@ Route::patch('/documents/{document}/archive', [DocumentController::class, 'updat
 Route::delete('/documents/bulk', [DocumentController::class, 'destroyMany'])
     ->middleware('auth:sanctum')
     ->name('documents.bulk-destroy');
+Route::get('/documents/export', [DocumentController::class, 'export'])
+    ->middleware('auth:sanctum')
+    ->name('documents.export');
 
 Route::apiResource('documents', DocumentController::class)
     ->only(['index', 'show', 'store', 'update', 'destroy'])

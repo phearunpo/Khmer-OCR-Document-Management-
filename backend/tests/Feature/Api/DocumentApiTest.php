@@ -19,6 +19,7 @@ class DocumentApiTest extends TestCase
         $this->getJson('/api/documents')->assertUnauthorized();
         $this->getJson('/api/documents/1')->assertUnauthorized();
         $this->getJson('/api/documents/summary')->assertUnauthorized();
+        $this->getJson('/api/documents/export')->assertUnauthorized();
 
         $this->postJson('/api/documents')->assertUnauthorized();
         $this->deleteJson('/api/documents/bulk', ['ids' => [1]])->assertUnauthorized();
@@ -370,6 +371,56 @@ class DocumentApiTest extends TestCase
         $this->getJson('/api/documents?page=0&type=Word&per_page=0&sort=invalid&direction=forward')
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['page', 'per_page', 'sort', 'direction', 'type']);
+    }
+
+    public function test_user_can_export_all_matching_owned_documents_as_csv(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'report.pdf',
+            'mime_type' => 'application/pdf',
+            'file_size' => 2048,
+            'is_favorite' => true,
+        ]);
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'scan.png',
+            'mime_type' => 'image/png',
+        ]);
+        Document::factory()->create([
+            'user_id' => $otherUser->id,
+            'original_name' => 'private.pdf',
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->get('/api/documents/export?search=report&favorites=1&sort=name&direction=asc')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->assertHeader('Content-Disposition', 'attachment; filename=documents.csv')
+            ->assertStreamedContent(
+                "id,name,type,mime_type,size_bytes,created_at,is_favorite,is_archived\n".
+                "{$user->documents()->where('original_name', 'report.pdf')->value('id')},report.pdf,PDF,application/pdf,2048,".
+                "{$user->documents()->where('original_name', 'report.pdf')->value('created_at')->toIso8601String()},1,0\n",
+            );
+    }
+
+    public function test_csv_export_escapes_spreadsheet_formulas_in_document_names(): void
+    {
+        $user = User::factory()->create();
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => '=SUM(1,1).pdf',
+        ]);
+        Sanctum::actingAs($user);
+
+        $response = $this->get('/api/documents/export')->assertOk();
+
+        $this->assertStringContainsString(
+            "'=SUM(1,1).pdf",
+            $response->streamedContent(),
+        );
     }
 
     public function test_user_can_delete_their_document_and_its_stored_file(): void

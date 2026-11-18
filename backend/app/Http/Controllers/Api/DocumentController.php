@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Http\Resources\DocumentResource;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -36,22 +37,87 @@ class DocumentController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $filters = $request->validate([
-            'search' => ['sometimes', 'string', 'max:255'],
-            'type' => ['sometimes', 'in:PDF,Image'],
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
-            'sort' => ['sometimes', 'in:name,date'],
-            'direction' => ['sometimes', 'in:asc,desc'],
-            'favorites' => ['sometimes', 'boolean'],
-            'archived' => ['sometimes', 'boolean'],
-        ]);
+        $filters = $this->documentFilters($request, includePagination: true);
         $sortColumn = ($filters['sort'] ?? 'date') === 'name'
             ? 'original_name'
             : 'created_at';
         $sortDirection = $filters['direction'] ?? 'desc';
 
-        $documents = $request->user()->documents()
+        $documents = $this->filteredDocuments($request, $filters)
+            ->orderBy($sortColumn, $sortDirection)
+            ->orderByDesc('id')
+            ->paginate($filters['per_page'] ?? 10)
+            ->withQueryString();
+
+        return DocumentResource::collection($documents);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $filters = $this->documentFilters($request);
+        $sortColumn = ($filters['sort'] ?? 'date') === 'name'
+            ? 'original_name'
+            : 'created_at';
+        $sortDirection = $filters['direction'] ?? 'desc';
+        $documents = $this->filteredDocuments($request, $filters)
+            ->orderBy($sortColumn, $sortDirection)
+            ->orderByDesc('id');
+
+        return response()->streamDownload(function () use ($documents): void {
+            $output = fopen('php://output', 'wb');
+            fputcsv($output, [
+                'id',
+                'name',
+                'type',
+                'mime_type',
+                'size_bytes',
+                'created_at',
+                'is_favorite',
+                'is_archived',
+            ], ',', '"', '');
+
+            foreach ($documents->cursor() as $document) {
+                fputcsv($output, [
+                    $document->id,
+                    $this->protectCsvValue($document->original_name),
+                    $document->mime_type === 'application/pdf' ? 'PDF' : 'Image',
+                    $document->mime_type,
+                    $document->file_size,
+                    $document->created_at->toIso8601String(),
+                    $document->is_favorite ? 1 : 0,
+                    $document->archived_at !== null ? 1 : 0,
+                ], ',', '"', '');
+            }
+
+            fclose($output);
+        }, 'documents.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    private function documentFilters(Request $request, bool $includePagination = false): array
+    {
+        $rules = [
+            'search' => ['sometimes', 'string', 'max:255'],
+            'type' => ['sometimes', 'in:PDF,Image'],
+            'sort' => ['sometimes', 'in:name,date'],
+            'direction' => ['sometimes', 'in:asc,desc'],
+            'favorites' => ['sometimes', 'boolean'],
+            'archived' => ['sometimes', 'boolean'],
+        ];
+
+        if ($includePagination) {
+            $rules['page'] = ['sometimes', 'integer', 'min:1'];
+            $rules['per_page'] = ['sometimes', 'integer', 'min:1', 'max:100'];
+        }
+
+        return $request->validate($rules);
+    }
+
+    private function filteredDocuments(Request $request, array $filters): HasMany
+    {
+        return $request->user()->documents()
             ->when(
                 $filters['search'] ?? null,
                 fn ($query, $search) => $query->whereLike('original_name', "%{$search}%"),
@@ -70,13 +136,14 @@ class DocumentController extends Controller
                 filter_var($filters['archived'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 fn ($query) => $query->whereNotNull('archived_at'),
                 fn ($query) => $query->whereNull('archived_at'),
-            )
-            ->orderBy($sortColumn, $sortDirection)
-            ->orderByDesc('id')
-            ->paginate($filters['per_page'] ?? 10)
-            ->withQueryString();
+            );
+    }
 
-        return DocumentResource::collection($documents);
+    private function protectCsvValue(string $value): string
+    {
+        return preg_match('/^[\t\r\n ]*[=+\-@]/', $value) === 1
+            ? "'".$value
+            : $value;
     }
 
     public function show(Request $request, int $document): DocumentResource

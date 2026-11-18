@@ -63,6 +63,7 @@ Register in the frontend or sign in with an existing user account. For direct AP
 | `PUT` | `/api/user` | Update the authenticated user's name and email |
 | `PUT` | `/api/user/password` | Change the authenticated user's password |
 | `GET` | `/api/documents` | List 10 documents per page by default; accepts `page`, `per_page` (1-100), `search`, `type=PDF\|Image`, `sort=name\|date`, and `direction=asc\|desc` (authentication required) |
+| `GET` | `/api/documents/export` | Download all matching documents as CSV using the library's search, type, favorite, archive, and sort filters |
 | `GET` | `/api/documents/{id}` | Return metadata for one document owned by the authenticated user |
 | `PATCH` | `/api/documents/{id}/favorite` | Mark or unmark a document as a favorite |
 | `PATCH` | `/api/documents/{id}/archive` | Archive or restore a document |
