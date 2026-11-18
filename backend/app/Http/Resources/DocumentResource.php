@@ -20,6 +20,7 @@ class DocumentResource extends JsonResource
             'type' => $this->mime_type === 'application/pdf' ? 'PDF' : 'Image',
             'mime_type' => $this->mime_type,
             'size' => $this->file_size,
+            'is_favorite' => (bool) $this->is_favorite,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

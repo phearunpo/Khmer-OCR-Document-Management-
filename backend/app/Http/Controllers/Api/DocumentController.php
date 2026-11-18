@@ -43,6 +43,7 @@ class DocumentController extends Controller
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'sort' => ['sometimes', 'in:name,date'],
             'direction' => ['sometimes', 'in:asc,desc'],
+            'favorites' => ['sometimes', 'boolean'],
         ]);
         $sortColumn = ($filters['sort'] ?? 'date') === 'name'
             ? 'original_name'
@@ -59,6 +60,10 @@ class DocumentController extends Controller
                 fn ($query, $type) => $type === 'PDF'
                     ? $query->where('mime_type', 'application/pdf')
                     : $query->whereIn('mime_type', ['image/png', 'image/jpeg']),
+            )
+            ->when(
+                filter_var($filters['favorites'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                fn ($query) => $query->where('is_favorite', true),
             )
             ->orderBy($sortColumn, $sortDirection)
             ->orderByDesc('id')
@@ -111,6 +116,17 @@ class DocumentController extends Controller
         ]);
         $document = $request->user()->documents()->findOrFail($document);
         $document->update(['original_name' => $validated['name']]);
+
+        return new DocumentResource($document);
+    }
+
+    public function updateFavorite(Request $request, int $document): DocumentResource
+    {
+        $validated = $request->validate([
+            'is_favorite' => ['required', 'boolean'],
+        ]);
+        $document = $request->user()->documents()->findOrFail($document);
+        $document->update(['is_favorite' => $validated['is_favorite']]);
 
         return new DocumentResource($document);
     }

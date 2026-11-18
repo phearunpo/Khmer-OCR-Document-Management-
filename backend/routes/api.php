@@ -31,6 +31,9 @@ Route::get('/documents/{document}/preview', [DocumentController::class, 'preview
 Route::get('/documents/summary', [DocumentController::class, 'summary'])
     ->middleware('auth:sanctum')
     ->name('documents.summary');
+Route::patch('/documents/{document}/favorite', [DocumentController::class, 'updateFavorite'])
+    ->middleware('auth:sanctum')
+    ->name('documents.favorite');
 
 Route::apiResource('documents', DocumentController::class)
     ->only(['index', 'show', 'store', 'update', 'destroy'])

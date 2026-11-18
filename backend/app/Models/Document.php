@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'original_name', 'disk', 'path', 'mime_type', 'file_size'])]
+#[Fillable(['user_id', 'original_name', 'disk', 'path', 'mime_type', 'file_size', 'is_favorite'])]
 class Document extends Model
 {
     /** @use HasFactory<DocumentFactory> */

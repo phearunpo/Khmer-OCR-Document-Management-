@@ -22,6 +22,7 @@ class DocumentApiTest extends TestCase
 
         $this->postJson('/api/documents')->assertUnauthorized();
         $this->patchJson('/api/documents/1')->assertUnauthorized();
+        $this->patchJson('/api/documents/1/favorite')->assertUnauthorized();
 
         $this->getJson('/api/documents/1/download')->assertUnauthorized();
         $this->getJson('/api/documents/1/preview')->assertUnauthorized();
@@ -242,6 +243,47 @@ class DocumentApiTest extends TestCase
             ->assertJsonPath('data.0.name', 'alpha.pdf')
             ->assertJsonPath('data.1.name', 'bravo.pdf')
             ->assertJsonPath('data.2.name', 'charlie.pdf');
+    }
+
+    public function test_user_can_favorite_their_document_and_filter_favorites(): void
+    {
+        $user = User::factory()->create();
+        $favorite = Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'favorite.pdf',
+        ]);
+        Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'regular.pdf',
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/documents/'.$favorite->id.'/favorite', [
+            'is_favorite' => true,
+        ])->assertOk()
+            ->assertJsonPath('data.is_favorite', true);
+
+        $this->getJson('/api/documents?favorites=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'favorite.pdf');
+    }
+
+    public function test_user_cannot_favorite_another_users_document(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $document = Document::factory()->create(['user_id' => $owner->id]);
+        Sanctum::actingAs($otherUser);
+
+        $this->patchJson('/api/documents/'.$document->id.'/favorite', [
+            'is_favorite' => true,
+        ])->assertNotFound();
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'is_favorite' => false,
+        ]);
     }
 
     public function test_document_list_can_be_filtered_by_type_and_name(): void
