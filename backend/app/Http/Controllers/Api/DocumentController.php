@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDocumentRequest;
 use App\Http\Resources\DocumentResource;
+use Closure;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -184,10 +185,32 @@ class DocumentController extends Controller
 
     public function update(Request $request, int $document): DocumentResource
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'not_regex:/[\/\\\\]/'],
-        ]);
         $document = $request->user()->documents()->findOrFail($document);
+        $allowedExtensions = match ($document->mime_type) {
+            'application/pdf' => ['pdf'],
+            'image/png' => ['png'],
+            'image/jpeg' => ['jpg', 'jpeg'],
+            default => [],
+        };
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'not_regex:/[\/\\\\]/',
+                function (string $attribute, mixed $value, Closure $fail) use ($allowedExtensions): void {
+                    if (! is_string($value)) {
+                        return;
+                    }
+
+                    $extension = strtolower(pathinfo($value, PATHINFO_EXTENSION));
+
+                    if (! in_array($extension, $allowedExtensions, true)) {
+                        $fail('The name extension must match the document file type.');
+                    }
+                },
+            ],
+        ]);
         $document->update(['original_name' => $validated['name']]);
 
         return new DocumentResource($document);

@@ -591,6 +591,70 @@ class DocumentApiTest extends TestCase
         ]);
     }
 
+    public function test_document_rename_requires_an_extension_matching_its_mime_type(): void
+    {
+        $user = User::factory()->create();
+        $pdf = Document::factory()->create([
+            'user_id' => $user->id,
+            'mime_type' => 'application/pdf',
+            'original_name' => 'report.pdf',
+        ]);
+        $png = Document::factory()->create([
+            'user_id' => $user->id,
+            'mime_type' => 'image/png',
+            'original_name' => 'scan.png',
+        ]);
+        $jpeg = Document::factory()->create([
+            'user_id' => $user->id,
+            'mime_type' => 'image/jpeg',
+            'original_name' => 'photo.jpg',
+        ]);
+        Sanctum::actingAs($user);
+
+        foreach ([
+            [$pdf, 'report.png'],
+            [$png, 'scan.pdf'],
+            [$jpeg, 'photo'],
+        ] as [$document, $name]) {
+            $this->patchJson('/api/documents/'.$document->id, ['name' => $name])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors('name');
+
+            $this->assertDatabaseHas('documents', [
+                'id' => $document->id,
+                'original_name' => $document->original_name,
+            ]);
+        }
+    }
+
+    public function test_document_rename_accepts_matching_extensions_case_insensitively(): void
+    {
+        $user = User::factory()->create();
+        $pdf = Document::factory()->create([
+            'user_id' => $user->id,
+            'mime_type' => 'application/pdf',
+        ]);
+        $png = Document::factory()->create([
+            'user_id' => $user->id,
+            'mime_type' => 'image/png',
+        ]);
+        $jpeg = Document::factory()->create([
+            'user_id' => $user->id,
+            'mime_type' => 'image/jpeg',
+        ]);
+        Sanctum::actingAs($user);
+
+        foreach ([
+            [$pdf, 'REPORT.PDF'],
+            [$png, 'SCAN.PNG'],
+            [$jpeg, 'PHOTO.JPEG'],
+        ] as [$document, $name]) {
+            $this->patchJson('/api/documents/'.$document->id, ['name' => $name])
+                ->assertOk()
+                ->assertJsonPath('data.name', $name);
+        }
+    }
+
     public function test_user_cannot_rename_another_users_document(): void
     {
         $owner = User::factory()->create();

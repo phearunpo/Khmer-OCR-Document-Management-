@@ -70,7 +70,7 @@ Register in the frontend or sign in with an existing user account. For direct AP
 | `PATCH` | `/api/documents/{id}/favorite` | Mark or unmark a document as a favorite |
 | `PATCH` | `/api/documents/{id}/archive` | Archive or restore a document |
 | `POST` | `/api/documents` | Upload one document using multipart form field `file` (authentication required) |
-| `PATCH` | `/api/documents/{id}` | Rename one of the authenticated user's documents |
+| `PATCH` | `/api/documents/{id}` | Rename an owned document while preserving its PDF, PNG, or JPEG extension |
 | `GET` | `/api/documents/{id}/preview` | Preview a private document owned by the authenticated user |
 | `GET` | `/api/documents/{id}/download` | Download a private document owned by the authenticated user |
 | `DELETE` | `/api/documents/{id}` | Delete one of the authenticated user's documents and its stored file (authentication required) |
