@@ -777,6 +777,7 @@ td:first-child {
 }
 
 .download-document-button,
+.favorite-document-button,
 .details-document-button,
 .preview-document-button,
 .rename-document-button,
@@ -789,6 +790,14 @@ td:first-child {
   font: inherit;
   font-size: 10px;
   font-weight: 600;
+}
+
+.favorite-document-button {
+  color: #a26b00;
+}
+
+.favorite-document-button:hover:not(:disabled) {
+  background: #fff8e6;
 }
 
 .details-document-button {
@@ -833,6 +842,7 @@ td:first-child {
 }
 
 .download-document-button:focus-visible,
+.favorite-document-button:focus-visible,
 .details-document-button:focus-visible,
 .preview-document-button:focus-visible,
 .rename-document-button:focus-visible,
@@ -842,6 +852,7 @@ td:first-child {
 }
 
 .download-document-button:disabled,
+.favorite-document-button:disabled,
 .details-document-button:disabled,
 .preview-document-button:disabled,
 .rename-document-button:disabled,

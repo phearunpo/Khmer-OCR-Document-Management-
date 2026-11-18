@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { validateDocumentFiles } from './documentFiles.js'
 import './App.css'
 
-const filters = ['All documents', 'PDFs', 'Images']
+const filters = ['All documents', 'PDFs', 'Images', 'Favorites']
 const apiBaseUrl = (
   import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000/api'
 ).replace(/\/$/, '')
@@ -165,6 +165,7 @@ function App() {
   const [documentDetails, setDocumentDetails] = useState(null)
   const [detailsError, setDetailsError] = useState('')
   const [loadingDetailsId, setLoadingDetailsId] = useState(null)
+  const [favoritingDocumentId, setFavoritingDocumentId] = useState(null)
   const [renamingDocumentId, setRenamingDocumentId] = useState(null)
   const [deletingDocumentId, setDeletingDocumentId] = useState(null)
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null)
@@ -299,6 +300,8 @@ function App() {
       params.set('type', 'PDF')
     } else if (activeFilter === 'Images') {
       params.set('type', 'Image')
+    } else if (activeFilter === 'Favorites') {
+      params.set('favorites', '1')
     }
 
     requestApi(`/documents?${params}`, token)
@@ -853,6 +856,31 @@ function App() {
     }
   }
 
+  async function toggleDocumentFavorite(document) {
+    setFavoritingDocumentId(document.id)
+    setDocumentError('')
+
+    try {
+      await requestApi(`/documents/${document.id}/favorite`, token, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_favorite: !document.is_favorite }),
+      })
+      reloadDocuments()
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setDocumentError(`Could not update favorite for ${document.name}: ${error.message}`)
+      }
+    } finally {
+      setFavoritingDocumentId(null)
+    }
+  }
+
   if (!token) {
     return (
       <main className="auth-page">
@@ -1267,6 +1295,18 @@ function App() {
                         <td>{formatFileSize(document.size)}</td>
                         <td><span className="status-pill">Stored</span></td>
                         <td>
+                          <button
+                            className="favorite-document-button"
+                            type="button"
+                            disabled={favoritingDocumentId !== null || isLoading}
+                            onClick={() => toggleDocumentFavorite(document)}
+                            aria-label={`${document.is_favorite ? 'Remove' : 'Add'} ${document.name} ${document.is_favorite ? 'from' : 'to'} favorites`}
+                            aria-pressed={document.is_favorite}
+                          >
+                            {favoritingDocumentId === document.id
+                              ? 'Saving…'
+                              : document.is_favorite ? '★ Saved' : '☆ Favorite'}
+                          </button>
                           <button
                             className="details-document-button"
                             type="button"
