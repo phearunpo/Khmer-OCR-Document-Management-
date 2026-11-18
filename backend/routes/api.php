@@ -37,6 +37,9 @@ Route::patch('/documents/{document}/favorite', [DocumentController::class, 'upda
 Route::patch('/documents/{document}/archive', [DocumentController::class, 'updateArchive'])
     ->middleware('auth:sanctum')
     ->name('documents.archive');
+Route::delete('/documents/bulk', [DocumentController::class, 'destroyMany'])
+    ->middleware('auth:sanctum')
+    ->name('documents.bulk-destroy');
 
 Route::apiResource('documents', DocumentController::class)
     ->only(['index', 'show', 'store', 'update', 'destroy'])

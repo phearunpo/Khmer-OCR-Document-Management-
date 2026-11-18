@@ -38,6 +38,7 @@ Send the returned token as `Authorization: Bearer YOUR_TOKEN` on authenticated r
 | `GET` | `/api/documents/{id}/preview` | Preview a private document owned by the signed-in user |
 | `GET` | `/api/documents/{id}/download` | Download a private document owned by the signed-in user |
 | `DELETE` | `/api/documents/{id}` | Delete one of the signed-in user's documents and its stored file (authentication required) |
+| `DELETE` | `/api/documents/bulk` | Delete 1-100 owned documents; send unique document IDs in the `ids` array |
 
 PDF, PNG, and JPEG files up to 10 MB are accepted. Uploads are stored on Laravel's private `local` disk. Responses contain document metadata and do not expose storage paths.
 

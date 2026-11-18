@@ -191,4 +191,35 @@ class DocumentController extends Controller
 
         return response()->json(null, 204);
     }
+
+    public function destroyMany(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
+            'ids.*' => ['required', 'integer', 'distinct', 'min:1'],
+        ]);
+        $documents = $request->user()->documents()
+            ->whereKey($validated['ids'])
+            ->get();
+
+        if ($documents->count() !== count($validated['ids'])) {
+            abort(404);
+        }
+
+        foreach ($documents as $document) {
+            if (! Storage::disk($document->disk)->delete($document->path)) {
+                throw new RuntimeException('Unable to delete the stored document.');
+            }
+        }
+
+        $request->user()->documents()
+            ->whereKey($validated['ids'])
+            ->delete();
+
+        return response()->json([
+            'data' => [
+                'deleted' => $documents->count(),
+            ],
+        ]);
+    }
 }

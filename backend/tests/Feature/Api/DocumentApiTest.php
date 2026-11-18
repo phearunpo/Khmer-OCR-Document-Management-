@@ -21,6 +21,7 @@ class DocumentApiTest extends TestCase
         $this->getJson('/api/documents/summary')->assertUnauthorized();
 
         $this->postJson('/api/documents')->assertUnauthorized();
+        $this->deleteJson('/api/documents/bulk', ['ids' => [1]])->assertUnauthorized();
         $this->patchJson('/api/documents/1')->assertUnauthorized();
         $this->patchJson('/api/documents/1/favorite')->assertUnauthorized();
         $this->patchJson('/api/documents/1/archive')->assertUnauthorized();
@@ -387,6 +388,67 @@ class DocumentApiTest extends TestCase
 
         $this->assertDatabaseMissing('documents', ['id' => $document->id]);
         Storage::disk('local')->assertMissing($document->path);
+    }
+
+    public function test_user_can_delete_multiple_owned_documents_and_their_stored_files(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $documents = Document::factory()->count(2)->create([
+            'user_id' => $user->id,
+        ]);
+        foreach ($documents as $document) {
+            Storage::disk('local')->put($document->path, 'document contents');
+        }
+        Sanctum::actingAs($user);
+
+        $this->deleteJson('/api/documents/bulk', [
+            'ids' => $documents->pluck('id')->all(),
+        ])->assertOk()
+            ->assertExactJson(['data' => ['deleted' => 2]]);
+
+        foreach ($documents as $document) {
+            $this->assertDatabaseMissing('documents', ['id' => $document->id]);
+            Storage::disk('local')->assertMissing($document->path);
+        }
+    }
+
+    public function test_bulk_delete_rejects_ids_not_owned_without_deleting_any_documents(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $owned = Document::factory()->create(['user_id' => $user->id]);
+        $notOwned = Document::factory()->create(['user_id' => $otherUser->id]);
+        Storage::disk('local')->put($owned->path, 'owned document');
+        Storage::disk('local')->put($notOwned->path, 'other document');
+        Sanctum::actingAs($user);
+
+        $this->deleteJson('/api/documents/bulk', [
+            'ids' => [$owned->id, $notOwned->id],
+        ])->assertNotFound();
+
+        $this->assertDatabaseHas('documents', ['id' => $owned->id]);
+        $this->assertDatabaseHas('documents', ['id' => $notOwned->id]);
+        Storage::disk('local')->assertExists($owned->path);
+        Storage::disk('local')->assertExists($notOwned->path);
+    }
+
+    public function test_bulk_delete_requires_a_bounded_list_of_unique_ids(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->deleteJson('/api/documents/bulk', ['ids' => []])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ids');
+
+        $this->deleteJson('/api/documents/bulk', ['ids' => [1, 1]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ids.1');
+
+        $this->deleteJson('/api/documents/bulk', ['ids' => array_fill(0, 101, 1)])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('ids');
     }
 
     public function test_user_can_rename_their_document_without_changing_its_storage_path(): void

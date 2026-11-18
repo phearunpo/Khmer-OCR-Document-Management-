@@ -71,6 +71,7 @@ Register in the frontend or sign in with an existing user account. For direct AP
 | `GET` | `/api/documents/{id}/preview` | Preview a private document owned by the authenticated user |
 | `GET` | `/api/documents/{id}/download` | Download a private document owned by the authenticated user |
 | `DELETE` | `/api/documents/{id}` | Delete one of the authenticated user's documents and its stored file (authentication required) |
+| `DELETE` | `/api/documents/bulk` | Delete 1-100 owned documents by sending unique document IDs in the `ids` array |
 
 Uploads accept PDF, PNG, and JPEG files up to 10 MB. Files are stored privately and are not exposed by a public URL. The API response includes document metadata, not the private storage path.
 
