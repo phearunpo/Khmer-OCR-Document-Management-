@@ -1,6 +1,6 @@
 # KhmerDocs frontend
 
-React and Vite dashboard for the Khmer OCR document management API. Users can edit their profile and change their password, while the document library supports favorites, archiving, bulk deletion, server-side pagination with selectable page sizes, whole-library totals, search, type filters, sorting by name or date, document details, previews, renaming, downloads, deletion, and upload progress.
+React and Vite dashboard for the Khmer OCR document management API. Users can edit their profile and change their password, while the document library supports favorites, archiving, bulk deletion, filtered CSV export, server-side pagination with selectable page sizes, whole-library totals, search, type filters, sorting by name or date, document details, previews, renaming, downloads, deletion, and upload progress.
 
 ## Run locally
 

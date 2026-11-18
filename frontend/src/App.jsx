@@ -159,6 +159,7 @@ function App() {
   const [sessionNotice, setSessionNotice] = useState(null)
   const [isLoading, setIsLoading] = useState(Boolean(token))
   const [isUploading, setIsUploading] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [isRevokingSessions, setIsRevokingSessions] = useState(false)
   const [previewDocument, setPreviewDocument] = useState(null)
   const [previewingDocumentId, setPreviewingDocumentId] = useState(null)
@@ -863,6 +864,52 @@ function App() {
     }
   }
 
+  async function exportDocuments() {
+    const params = new URLSearchParams()
+    const [sort, direction] = sortOrder.split('-')
+
+    if (debouncedQuery) {
+      params.set('search', debouncedQuery)
+    }
+
+    if (activeFilter === 'PDFs') {
+      params.set('type', 'PDF')
+    } else if (activeFilter === 'Images') {
+      params.set('type', 'Image')
+    } else if (activeFilter === 'Favorites') {
+      params.set('favorites', '1')
+    } else if (activeFilter === 'Archived') {
+      params.set('archived', '1')
+    }
+
+    params.set('sort', sort)
+    params.set('direction', direction)
+    setIsExporting(true)
+    setDocumentError('')
+
+    try {
+      const file = await downloadApi(`/documents/export?${params}`, token)
+      const url = URL.createObjectURL(file)
+      const link = window.document.createElement('a')
+      link.href = url
+      link.download = 'documents.csv'
+      link.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem(tokenStorageKey)
+        setToken(null)
+        setUser(null)
+        setDocuments([])
+        setAuthError('Your session expired. Please sign in again.')
+      } else {
+        setDocumentError(`Could not export documents: ${error.message}`)
+      }
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   async function previewDocumentFile(document) {
     setPreviewingDocumentId(document.id)
     setDocumentError('')
@@ -1323,6 +1370,14 @@ function App() {
                     <option value="name-desc">Name Z to A</option>
                   </select>
                 </label>
+                <button
+                  className="export-button"
+                  type="button"
+                  disabled={isLoading || isExporting || pagination.total === 0}
+                  onClick={exportDocuments}
+                >
+                  {isExporting ? 'Exporting…' : 'Export CSV'}
+                </button>
               </div>
             </div>
 
