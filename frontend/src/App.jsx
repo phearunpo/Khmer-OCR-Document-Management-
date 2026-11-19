@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { validateDocumentFiles } from './documentFiles.js'
+import { validateDocumentFiles, validateDocumentRename } from './documentFiles.js'
 import './App.css'
 
 const filters = ['All documents', 'PDFs', 'Images', 'Favorites', 'Archived']
@@ -813,6 +813,13 @@ function App() {
     }
 
     if (name === document.name) {
+      return
+    }
+
+    const validationError = validateDocumentRename(name, document.mime_type)
+
+    if (validationError) {
+      setDocumentError(`Could not rename ${document.name}: ${validationError}`)
       return
     }
 
