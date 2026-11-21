@@ -280,6 +280,7 @@ function App() {
       const nextQuery = query.trim()
 
       if (nextQuery !== previousDebouncedQuery.current) {
+        setIsLoading(true)
         previousDebouncedQuery.current = nextQuery
         setDebouncedQuery(nextQuery)
         setCurrentPage(1)
@@ -405,7 +406,6 @@ function App() {
     }
 
     setQuery(nextQuery)
-    setIsLoading(true)
   }
 
   function handleFilterChange(filter) {
