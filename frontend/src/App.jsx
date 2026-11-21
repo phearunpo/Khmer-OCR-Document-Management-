@@ -111,6 +111,10 @@ async function downloadApi(path, token) {
 }
 
 function formatFileSize(size) {
+  if (size === 0) {
+    return '0 B'
+  }
+
   if (size < 1024 * 1024) {
     return `${Math.max(1, Math.round(size / 1024))} KB`
   }
