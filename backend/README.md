@@ -29,7 +29,7 @@ Send the returned token as `Authorization: Bearer YOUR_TOKEN` on authenticated r
 | `GET` | `/api/documents/summary` | Return the signed-in user's document totals by type |
 | `PUT` | `/api/user` | Update the signed-in user's name and email |
 | `PUT` | `/api/user/password` | Change the signed-in user's password |
-| `GET` | `/api/documents` | List 10 documents per page by default; accepts `page`, `per_page` (1-100), `search`, `type=PDF\|Image`, `sort=name\|date`, and `direction=asc\|desc` (authentication required) |
+| `GET` | `/api/documents` | List 10 documents per page by default; accepts `page`, `per_page` (1-100), `search`, `type=PDF\|Image`, `favorites=1`, `archived=1` (archived documents are excluded by default), `sort=name\|date`, and `direction=asc\|desc` (authentication required) |
 | `GET` | `/api/documents/export` | Download all matching documents as CSV; accepts the library's search, type, favorite, archive, and sort filters |
 | `GET` | `/api/documents/{id}` | Return metadata for one document owned by the signed-in user |
 | `GET` | `/api/documents/{id}/notes` | Read notes for an owned document |
