@@ -1662,7 +1662,7 @@ function App() {
               </div>
             )}
             {pagination.total > 0 && (
-              <div className="pagination-controls" aria-label="Document pages">
+              <nav className="pagination-controls" aria-label="Document pages">
                 <span className="pagination-summary">
                   Showing {(pagination.current_page - 1) * pagination.per_page + 1}
                   {'–'}
@@ -1708,7 +1708,7 @@ function App() {
                     Next
                   </button>
                 </div>
-              </div>
+              </nav>
             )}
           </section>
           <p className="privacy-note">
