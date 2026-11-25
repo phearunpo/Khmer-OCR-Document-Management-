@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { validateDocumentFiles, validateDocumentRename } from './documentFiles.js'
+import OcrDialog from './OcrDialog.jsx'
+import { ocrStatusLabels } from './ocrStatus.js'
 import './App.css'
 
 const filters = ['All documents', 'PDFs', 'Images', 'Favorites', 'Archived']
@@ -166,6 +168,7 @@ function App() {
   const [isExporting, setIsExporting] = useState(false)
   const [isRevokingSessions, setIsRevokingSessions] = useState(false)
   const [previewDocument, setPreviewDocument] = useState(null)
+  const [ocrDocument, setOcrDocument] = useState(null)
   const [previewingDocumentId, setPreviewingDocumentId] = useState(null)
   const [documentDetails, setDocumentDetails] = useState(null)
   const [detailsError, setDetailsError] = useState('')
@@ -180,6 +183,50 @@ function App() {
   const [selectedDocumentIds, setSelectedDocumentIds] = useState([])
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null)
+
+  const closeOcrDialog = useCallback(() => setOcrDocument(null), [])
+  const updateOcrStatus = useCallback((documentId, status) => {
+    setDocuments((current) => current.map((document) => (
+      document.id === documentId && document.ocr_status !== status
+        ? { ...document, ocr_status: status }
+        : document
+    )))
+  }, [])
+  const handleOcrSessionExpired = useCallback(() => {
+    sessionStorage.removeItem(tokenStorageKey)
+    setOcrDocument(null)
+    setToken(null)
+    setUser(null)
+    setDocuments([])
+    setDocumentSummary(null)
+    setAuthError('Your session expired. Please sign in again.')
+  }, [])
+
+  useEffect(() => {
+    const activeDocuments = documents.filter((document) => ['queued', 'processing'].includes(document.ocr_status))
+    if (!token || activeDocuments.length === 0 || ocrDocument) return undefined
+    let isCurrent = true
+    const controller = new AbortController()
+    const timer = window.setTimeout(async () => {
+      const updates = await Promise.allSettled(activeDocuments.map((document) => (
+        requestApi(`/documents/${document.id}`, token, { signal: controller.signal })
+      )))
+      if (!isCurrent) return
+      if (updates.some((update) => update.status === 'rejected' && update.reason.status === 401)) {
+        handleOcrSessionExpired()
+        return
+      }
+      setDocuments((current) => current.map((document) => {
+        const update = updates.find((entry) => entry.status === 'fulfilled' && entry.value.data.id === document.id)
+        return update ? { ...document, ocr_status: update.value.data.ocr_status } : document
+      }))
+    }, 3000)
+    return () => {
+      isCurrent = false
+      controller.abort()
+      window.clearTimeout(timer)
+    }
+  }, [documents, token, ocrDocument, handleOcrSessionExpired])
 
   useEffect(() => {
     if (!previewDocument) {
@@ -1259,7 +1306,7 @@ function App() {
               <p className="eyebrow">DOCUMENT MANAGEMENT</p>
               <h1>Your documents, in one place.</h1>
               <p className="page-description">
-                Organize Khmer documents and get them ready for OCR.
+                Organize Khmer documents and extract text from your scans.
               </p>
             </div>
             <input
@@ -1541,8 +1588,16 @@ function App() {
                           })}
                         </td>
                         <td>{formatFileSize(document.size)}</td>
-                        <td><span className="status-pill">Stored</span></td>
+                        <td><span className={`status-pill ocr-status-${document.ocr_status ?? 'not_started'}`}>{ocrStatusLabels[document.ocr_status] ?? 'Ready for OCR'}</span></td>
                         <td>
+                          <button
+                            className="ocr-document-button"
+                            type="button"
+                            onClick={() => setOcrDocument(document)}
+                            aria-label={`Extract or view text for ${document.name}`}
+                          >
+                            {document.ocr_status === 'completed' ? 'Read document' : 'Analyze / read'}
+                          </button>
                           <button
                             className="favorite-document-button"
                             type="button"
@@ -1733,6 +1788,16 @@ function App() {
           </p>
         </section>
       </main>
+      {ocrDocument && <OcrDialog
+        key={ocrDocument.id}
+        document={ocrDocument}
+        token={token}
+        requestApi={requestApi}
+        downloadApi={downloadApi}
+        onClose={closeOcrDialog}
+        onStatusChange={updateOcrStatus}
+        onSessionExpired={handleOcrSessionExpired}
+      />}
       {detailsError && <p className="upload-error details-error" role="alert">{detailsError}</p>}
       {documentDetails && (
         <div
