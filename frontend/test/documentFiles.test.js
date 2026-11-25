@@ -130,3 +130,12 @@ test('rejects document rename with empty name, slashes, or excessive length', ()
   )
 })
 
+test('counts Unicode characters consistently when validating rename length', () => {
+  assert.equal(validateDocumentRename('ឯកសារ.pdf', 'application/pdf'), null)
+  assert.equal(validateDocumentRename(`${'📄'.repeat(251)}.pdf`, 'application/pdf'), null)
+  assert.equal(
+    validateDocumentRename(`${'📄'.repeat(252)}.pdf`, 'application/pdf'),
+    'Document name cannot exceed 255 characters.',
+  )
+})
+

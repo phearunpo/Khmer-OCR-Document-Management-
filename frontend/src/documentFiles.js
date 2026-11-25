@@ -44,7 +44,7 @@ export function validateDocumentRename(name, mimeType) {
 
   const trimmed = name.trim()
 
-  if (trimmed.length > 255) {
+  if (Array.from(trimmed).length > 255) {
     return 'Document name cannot exceed 255 characters.'
   }
 
