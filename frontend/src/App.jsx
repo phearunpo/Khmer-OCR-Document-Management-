@@ -1581,7 +1581,7 @@ function App() {
                           <button
                             className="download-document-button"
                             type="button"
-                            disabled={downloadingDocumentId === document.id}
+                            disabled={downloadingDocumentId !== null}
                             onClick={() => downloadDocument(document)}
                             aria-label={`Download ${document.name}`}
                           >
