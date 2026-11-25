@@ -1433,7 +1433,12 @@ function App() {
                 <button
                   className="export-button"
                   type="button"
-                  disabled={isLoading || isExporting || pagination.total === 0}
+                  disabled={
+                    isLoading ||
+                    isExporting ||
+                    query.trim() !== debouncedQuery ||
+                    pagination.total === 0
+                  }
                   onClick={exportDocuments}
                 >
                   {isExporting ? 'Exporting…' : 'Export CSV'}
