@@ -35,6 +35,18 @@ test('accepts files at the maximum size and rejects larger files', () => {
   ])
 })
 
+test('rejects empty documents while retaining nonempty selections', () => {
+  const files = [
+    { name: 'empty.pdf', size: 0 },
+    { name: 'scan.png', size: 1 },
+  ]
+
+  assert.deepEqual(validateDocumentFiles(files), {
+    acceptedFiles: [files[1]],
+    errors: ['empty.pdf: empty files cannot be uploaded.'],
+  })
+})
+
 test('reports unsupported files while retaining valid selections', () => {
   const files = [
     { name: 'notes.txt', size: 100 },
