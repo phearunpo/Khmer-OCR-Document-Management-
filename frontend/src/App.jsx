@@ -679,7 +679,7 @@ function App() {
     const selectedFiles = Array.from(event.target.files ?? [])
     event.target.value = ''
 
-    if (selectedFiles.length === 0) {
+    if (selectedFiles.length === 0 || isUploading) {
       return
     }
 
@@ -1268,6 +1268,7 @@ function App() {
               type="file"
               accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
               multiple
+              disabled={isUploading}
               onChange={addFiles}
               aria-label="Choose PDF or image documents"
             />
@@ -1645,6 +1646,7 @@ function App() {
                   <button
                     className="empty-upload-button"
                     type="button"
+                    disabled={isUploading || isLoading}
                     onClick={() => fileInput.current?.click()}
                   >
                     Choose a file
