@@ -18,6 +18,10 @@ class Document extends Model
     {
         return [
             'archived_at' => 'datetime',
+            'ocr_completed_at' => 'datetime',
+            'ocr_pages' => 'integer',
+            'ocr_processed_pages' => 'integer',
+            'ocr_analysis' => 'array',
         ];
     }
 
