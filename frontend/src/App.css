@@ -624,12 +624,14 @@ h2 {
 .filter-tabs {
   display: flex;
   gap: 20px;
+  overflow-x: auto;
   padding: 0 22px;
   border-bottom: 1px solid #eff0f3;
 }
 
 .filter-tab {
   position: relative;
+  flex: 0 0 auto;
   min-height: 38px;
   padding: 0 1px;
   border: 0;
@@ -638,6 +640,7 @@ h2 {
   cursor: pointer;
   font: inherit;
   font-size: 11px;
+  white-space: nowrap;
 }
 
 .filter-tab.selected {
