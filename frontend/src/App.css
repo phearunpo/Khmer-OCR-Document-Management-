@@ -788,7 +788,7 @@ td {
   font-size: 11px;
 }
 
-td:first-child {
+.document-name {
   display: flex;
   max-width: 380px;
   align-items: center;
@@ -1360,7 +1360,7 @@ td:first-child {
     padding-left: 16px;
   }
 
-  td:first-child {
+  .document-name {
     max-width: 200px;
   }
 

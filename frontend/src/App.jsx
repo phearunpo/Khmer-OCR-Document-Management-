@@ -1523,12 +1523,14 @@ function App() {
                           />
                         </td>
                         <td>
-                          <span className={`file-badge ${document.type === 'PDF' ? 'pdf-badge' : 'image-badge'}`}>
-                            {document.type === 'PDF' ? 'PDF' : 'IMG'}
-                          </span>
-                          <span className="file-name" title={document.name}>
-                            {document.name}
-                          </span>
+                          <div className="document-name">
+                            <span className={`file-badge ${document.type === 'PDF' ? 'pdf-badge' : 'image-badge'}`}>
+                              {document.type === 'PDF' ? 'PDF' : 'IMG'}
+                            </span>
+                            <span className="file-name" title={document.name}>
+                              {document.name}
+                            </span>
+                          </div>
                         </td>
                         <td>{document.type}</td>
                         <td>
