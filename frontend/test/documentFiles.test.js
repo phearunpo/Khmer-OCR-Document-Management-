@@ -63,6 +63,19 @@ test('reports unsupported files while retaining valid selections', () => {
   ])
 })
 
+test('requires a filename extension even when the name matches a supported type', () => {
+  const files = ['pdf', 'PNG', 'jpg', 'jpeg', 'scan.', 'scan.pdf'].map((name) => ({
+    name,
+    size: 100,
+  }))
+  const result = validateDocumentFiles(files)
+
+  assert.deepEqual(result.acceptedFiles, [files[5]])
+  assert.deepEqual(result.errors, files.slice(0, 5).map((file) => (
+    `${file.name}: choose a PDF, PNG, or JPEG file.`
+  )))
+})
+
 test('resolves allowed extensions for document mime types', () => {
   assert.deepEqual(getAllowedDocumentExtensions('application/pdf'), ['pdf'])
   assert.deepEqual(getAllowedDocumentExtensions('image/png'), ['png'])

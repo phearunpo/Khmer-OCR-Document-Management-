@@ -20,7 +20,8 @@ export function validateDocumentFiles(files) {
   const errors = []
 
   for (const file of files) {
-    const extension = file.name.split('.').pop()?.toLowerCase()
+    const dotIndex = file.name.lastIndexOf('.')
+    const extension = dotIndex === -1 ? '' : file.name.slice(dotIndex + 1).toLowerCase()
 
     if (!supportedExtensions.has(extension)) {
       errors.push(`${file.name}: choose a PDF, PNG, or JPEG file.`)
