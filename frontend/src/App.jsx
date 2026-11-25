@@ -1482,6 +1482,14 @@ function App() {
                     <tr>
                       <th scope="col" className="selection-cell">
                         <input
+                          ref={(checkbox) => {
+                            if (checkbox) {
+                              checkbox.indeterminate = (
+                                selectedDocumentIds.length > 0 &&
+                                selectedDocumentIds.length < documents.length
+                              )
+                            }
+                          }}
                           className="selection-checkbox"
                           type="checkbox"
                           checked={
