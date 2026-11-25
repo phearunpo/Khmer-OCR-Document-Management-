@@ -22,6 +22,7 @@ class DocumentResource extends JsonResource
             'size' => $this->file_size,
             'is_favorite' => (bool) $this->is_favorite,
             'is_archived' => $this->archived_at !== null,
+            'ocr_status' => $this->ocr_status ?? 'not_started',
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
