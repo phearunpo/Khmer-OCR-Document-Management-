@@ -4,6 +4,10 @@ This directory contains the Laravel API for Khmer OCR Document Management. For p
 
 The API allows requests from the frontend origin configured by `FRONTEND_URL` (default `http://localhost:5173`). Set this value to the origin serving the frontend when it differs.
 
+OCR runs on the dedicated `ocr` database queue. Configure the Python/Tesseract runtime as described in the root README, then run `php artisan queue:work ocr --queue=ocr --tries=1 --timeout=330`. The queue's 390-second reservation exceeds the job timeout to prevent concurrent processing of the same attempt. Each OCR run has an identifier so delayed jobs cannot overwrite newer results.
+
+OCR requests accept optional `mode=structured` to retain document tables, cell spans, source text, schedule rows, and review indicators. Results are stored as private JSON in `ocr_analysis` and returned only from the owner's OCR result endpoint after completion. Omitting `mode` keeps the existing plain-text behavior. Retrying clears previous analysis; list responses contain status only. Table CSV exports retain empty fields, expand explicit merged cells, and protect spreadsheet formula values.
+
 ## Authentication and document endpoints
 
 Create an account to receive a Laravel Sanctum bearer token:
@@ -32,6 +36,10 @@ Send the returned token as `Authorization: Bearer YOUR_TOKEN` on authenticated r
 | `GET` | `/api/documents` | List 10 documents per page by default; accepts `page`, `per_page` (1-100), `search`, `type=PDF\|Image`, `favorites=1`, `archived=1` (archived documents are excluded by default), `sort=name\|date`, and `direction=asc\|desc` (authentication required) |
 | `GET` | `/api/documents/export` | Download all matching documents as CSV; accepts the library's search, type, favorite, archive, and sort filters |
 | `GET` | `/api/documents/{id}` | Return metadata for one document owned by the signed-in user |
+| `POST` | `/api/documents/{id}/ocr` | Start a background OCR run with JSON `language`: `khm+eng`, `khm`, or `eng` |
+| `GET` | `/api/documents/{id}/ocr` | Read OCR status, page progress, completed text, and errors |
+| `GET` | `/api/documents/{id}/ocr/download` | Download completed text as UTF-8; returns 409 until recognition completes |
+| `GET` | `/api/documents/{id}/ocr/tables/{table}/download` | Download an owned completed table as UTF-8 CSV, using its `p1-t1` style identifier |
 | `GET` | `/api/documents/{id}/notes` | Read notes for an owned document |
 | `PATCH` | `/api/documents/{id}/notes` | Replace or clear notes for an owned document (up to 10,000 characters) |
 | `PATCH` | `/api/documents/{id}/favorite` | Mark or unmark a document as a favorite |
