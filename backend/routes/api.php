@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\DocumentOcrController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -49,6 +50,17 @@ Route::get('/documents/{document}/notes', [DocumentController::class, 'showNotes
 Route::patch('/documents/{document}/notes', [DocumentController::class, 'updateNotes'])
     ->middleware('auth:sanctum')
     ->name('documents.notes.update');
+
+Route::middleware('auth:sanctum')->group(function (): void {
+    Route::get('/documents/{document}/ocr', [DocumentOcrController::class, 'show'])
+        ->name('documents.ocr.show');
+    Route::post('/documents/{document}/ocr', [DocumentOcrController::class, 'store'])
+        ->middleware('throttle:12,1')->name('documents.ocr.store');
+    Route::get('/documents/{document}/ocr/download', [DocumentOcrController::class, 'download'])
+        ->name('documents.ocr.download');
+    Route::get('/documents/{document}/ocr/tables/{table}/download', [DocumentOcrController::class, 'downloadTable'])
+        ->where('table', 'p[0-9]+-t[0-9]+')->name('documents.ocr.tables.download');
+});
 
 Route::apiResource('documents', DocumentController::class)
     ->only(['index', 'show', 'store', 'update', 'destroy'])
